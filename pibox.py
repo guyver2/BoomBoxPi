@@ -6,28 +6,46 @@ if True: # fake screen for raspberry pi
 
 from mutagen.easyid3 import EasyID3
 from mutagen.mp3 import MP3
-import unicodedata    
 import random
 import pygame
 from time import sleep
 import thread
+import json
 
 SONG_END = pygame.USEREVENT + 1
 
 class Track:
-    def __init__(self, path):
+    def __init__(self, path=""):
+        if path == "":
+            return
         self.path = path
         self.valid = os.path.isfile(path)
         if self.valid:
             tag = EasyID3(path)
-            self.artist = unicode(tag["artist"][0]).encode("utf8")
-            self.album = unicode(tag["album"][0]).encode("utf8")
-            self.title = unicode(tag["title"][0]).encode("utf8")
+            self.artist = tag["artist"][0]
+            self.album = tag["album"][0]
+            self.title = tag["title"][0]
             self.length = MP3(path).info.length
             
     def __repr__(self):
-        data = unicode("%s - %s"%(self.artist, self.title), "utf8")
-        return unicodedata.normalize('NFKD', data).encode('ascii','ignore')
+        return "%s - %s"%(self.artist, self.title)
+        
+    def toDict(self):
+        result = {}
+        result["path"] = self.path
+        result["artist"] = self.artist
+        result["album"] = self.album
+        result["title"] = self.title
+        result["length"] = self.length
+        return result
+    
+    def fromDict(self, data):
+        self.path = data["path"]
+        self.artist = data["artist"]
+        self.album = data["album"]
+        self.title = data["title"]
+        self.length = data["length"]
+        self.valid = os.path.isfile(self.path)
 
         
 class Playlist:
@@ -37,6 +55,23 @@ class Playlist:
         self.tracks = []
         self.loadTracks()
         self.trackID = 0
+        
+    def toDict(self):
+        result = {}
+        result["path"] = self.path
+        result["name"] = self.name
+        result["tracks"] = [track.toDict() for track in self.tracks]
+        return result
+    
+    def fromDict(self, data):
+        self.path = data["path"]
+        self.name = data["name"]
+        self.tracks = []
+        for track in data["tracks"]:
+            t = Track()
+            t.fromDict(track)
+            self.tracks.append(t)
+        self.trackID = -0
     
     def loadTracks(self):
         for trackFile in glob.glob(self.path+"/*"):
@@ -44,7 +79,7 @@ class Playlist:
                self.tracks.append(Track(trackFile)) 
     
     def isValidFile(self, trackFile):
-        if not os.path.isFile(trackFile) : return False     
+        if not os.path.isFile(trackFile) : return False
         
     def current(self):
         return self.tracks[self.trackID]
@@ -188,15 +223,35 @@ class Player:
                     self.next()
     
 
+def importPlaylists():
+    playlists = []
+    if os.path.isfile("data/playlists.json"):
+        with open('data/playlists.json') as f:
+            data = json.load(f)
+            for p in data["playlists"]:
+                play = Playlist("fake")
+                play.fromDict(p)
+                playlists.append(play)
+    else :
+        for playlistDir in glob.glob("data/playlists/*"):
+            if os.path.isdir(playlistDir):
+                playlists.append(Playlist(playlistDir))
+        data = [p.toDict() for p in playlists]
+        with open("data/playlists.json", "w") as write_file:
+            json.dump({"playlists":data}, write_file)
+    
+    return playlists
+
+
+
 
 
 if __name__ == "__main__":
 
-    playlists = []
-    for playlistDir in glob.glob("data/playlists/*"):
-        if os.path.isdir(playlistDir):
-            print playlistDir
-            playlists.append(Playlist(playlistDir))
+    playlists = importPlaylists()
+    
+    for p in playlists:
+        print(p.name, len(p.tracks))
 
     player = Player(playlists)
     player.shuffle()

@@ -6,7 +6,7 @@ import threading
 import glob
 import os
 import time
-from pibox import Player, Playlist
+from pibox import Player, Playlist, importPlaylists
 from button import Button
 
 
@@ -60,12 +60,8 @@ def startSignal():
 
 if __name__ == "__main__":
     
-    playlists = []
-    for playlistDir in glob.glob("/home/pi/pibox/data/playlists/*"):
-        if os.path.isdir(playlistDir):
-            print playlistDir
-            playlists.append(Playlist(playlistDir))
-
+    playlists = importPlaylists()
+    
     player = Player(playlists)
 
 
