@@ -11,7 +11,6 @@ import random
 import pygame
 from time import sleep
 import thread
-from lcd import LCDScreen
 
 SONG_END = pygame.USEREVENT + 1
 
@@ -63,10 +62,9 @@ class Playlist:
     
 
 class Player:
-    def __init__(self, playlists, lcd=None):
+    def __init__(self, playlists):
         global SONG_END
-        self.lcd = lcd
-        self.volume = 50
+        self.volume = 0.05
         self.muted = False
         self.volumeMax = 100
         self.playing = False
@@ -82,12 +80,20 @@ class Player:
         pygame.mixer.init()
         pygame.mixer.music.set_endevent(SONG_END)
         self.alive = True
-        if(len(self.playlists) > 0):
+        if(self.playlists is not None and len(self.playlists) > 0):
             self.setPlaylist(self.playlists[0])
         thread.start_new_thread(Player.watchdog, (self,))
     
     def __del__(self):
         self.alive = False
+    
+    def nowPlaying(self):
+        return self.currentPlaylist.name + " - " + str(self.currentTrack)
+    
+    def setPlaylists(self, playlists):
+        self.stop()
+        self.playlists = playlists
+        self.setPlaylist(self.playlists[0])
     
     def setPlaylist(self, playlist):
         self.stop()
@@ -104,6 +110,7 @@ class Player:
         else:
             self.currentTrack = self.currentPlaylist.current()
             pygame.mixer.music.load(self.currentTrack.path)
+            pygame.mixer.music.set_volume(self.volume)
             pygame.mixer.music.play(0)
             print "now playing", self.currentTrack
             self.playing = True
@@ -151,15 +158,26 @@ class Player:
     def nextPlaylist(self):
         self.playlistID = (self.playlistID+1) % len(self.playlists)
         self.setPlaylist(self.playlists[self.playlistID])
+        self.next()
         
     def prevPlaylist(self):
         self.playlistID = (self.playlistID-1) % len(self.playlists)
         self.setPlaylist(self.playlists[self.playlistID])
-    
+        self.next()
     
     def getTrackPos(self):
         if self.playing:
             return pygame.mixer.music.get_pos()
+    
+    def setVolume(self, vol):
+        self.volume = vol / 100.0
+        if self.playing:
+            pygame.mixer.music.set_volume(self.volume)
+            
+    
+    def getVolume(self):
+        return self.volume * 100
+        
         
     def watchdog(self):
         global SONG_END
@@ -170,44 +188,39 @@ class Player:
                     self.next()
     
 
-playlists = []
-for playlistDir in glob.glob("data/playlists/*"):
-    if os.path.isdir(playlistDir):
-        print playlistDir
-        playlists.append(Playlist(playlistDir))
 
-player = Player(playlists)
 
-lcd = LCDScreen()
+if __name__ == "__main__":
 
-print type(player)
-player.shuffle()
-print type(player)
-player.nextPlaylist()
-print type(player)
-player.play()
-print type(player)
-sleep(5)
-print type(player)
-player.pause()
-sleep(5)
-player.play()
-sleep(5)
-player.pause()
-sleep(5)
-player.next()
-sleep(5)
-player.next()
-sleep(5)
-player.prev()
-sleep(5)
+    playlists = []
+    for playlistDir in glob.glob("data/playlists/*"):
+        if os.path.isdir(playlistDir):
+            print playlistDir
+            playlists.append(Playlist(playlistDir))
 
-player.nextPlaylist()
-        
-sleep(5)
-player.alive = False
+    player = Player(playlists)
+    player.shuffle()
+    player.nextPlaylist()
+    player.play()
+    sleep(5)
+    player.pause()
+    sleep(5)
+    player.play()
+    sleep(5)
+    player.pause()
+    sleep(5)
+    player.next()
+    sleep(5)
+    player.next()
+    sleep(5)
+    player.prev()
+    sleep(5)
+    player.nextPlaylist()
+            
+    sleep(5)
+    player.alive = False
 
-print "all closed"
+    print "all closed"
         
         
         

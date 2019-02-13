@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Ma Boom Box</title>
+</head>
+<body>
+    <H1> My First Boom Box</H1>
+    {% if now_playing %}
+    <hr>
+    <h3>Now Playing : {{ now_playing }}</h3>
+    <hr>
+    {% endif %}
+    <h2>PLAY</h2>
+    <form id="playform" method="post">
+        <input type="submit" name="nextPlaylist" value="Changer de Playlist"/><br/>
+        <input type="submit" name="prev" value="Prev"/>
+        <input type="submit" name="play" value="Play/pause"/>
+        <input type="submit" name="next" value="Next"/>
+        <br>
+        <input type="range" min="0" max="100" value="{{ volume }}" name="volume" id="volume"/>
+    </form>
+    <H2>ADMIN</H2>
+    <form id="adminform" method="post">
+        <input type="submit" name="lock" value="Lock"/>
+        <input type="submit" name="mute" value="Mute"/>
+        <br><br><input type="submit" value="refresh"/>
+    </form>
+
+<script>
+var slider = document.getElementById("volume");
+slider.onmouseup = function () {
+  document.getElementById("playform").submit();
+}
+
+</script>
+
+</body>
+</html>
