@@ -11,6 +11,7 @@ import pygame
 from time import sleep
 import thread
 import json
+import unicodedata
 
 SONG_END = pygame.USEREVENT + 1
 
@@ -22,9 +23,12 @@ class Track:
         self.valid = os.path.isfile(path)
         if self.valid:
             tag = EasyID3(path)
-            self.artist = tag["artist"][0]
-            self.album = tag["album"][0]
-            self.title = tag["title"][0]
+            self.artist = unicode(tag["artist"][0]).encode("utf8")
+            self.artist = unicodedata.normalize('NFKD', unicode(self.artist, "utf8")).encode('ascii','ignore')
+            self.album = unicode(tag["album"][0]).encode("utf8")
+            self.album = unicodedata.normalize('NFKD', unicode(self.album, "utf8")).encode('ascii','ignore')
+            self.title = unicode(tag["title"][0]).encode("utf8")
+            self.title = unicodedata.normalize('NFKD', unicode(self.title, "utf8")).encode('ascii','ignore')
             self.length = MP3(path).info.length
             
     def __repr__(self):
