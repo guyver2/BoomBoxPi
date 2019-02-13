@@ -1,34 +1,7 @@
-import RPi.GPIO as GPIO # Import Raspberry Pi GPIO library
-import threading
-import glob
-import os
-import time
-from pibox import Player, Playlist
+import gpiozero as gz
 
-class ButtonHandler(threading.Thread):
-    def __init__(self, pin, funcDown, funcUp, bouncetime=200):
-        threading.Thread.__init__(self)
-        self.funcDown = funcDown
-        self.funcUp = funcUp
-        self.pin = pin
-        self.bouncetime = float(bouncetime)/1000
-        self.lastpinval = GPIO.input(self.pin)
-        self.lock = threading.Lock()
-
-    def __call__(self, *args):
-        if not self.lock.acquire(False):
-            return
-        t = threading.Timer(self.bouncetime, self.read, args=args)
-        t.start()
-
-    def read(self, *args):
-        pinval = GPIO.input(self.pin)
-        if (pinval == 0 and self.lastpinval == 1):
-            self.funcUp(*args)
-        if (pinval == 1 and self.lastpinval == 0):
-            self.funcDown(*args)
-        self.lastpinval = pinval
-        self.lock.release()
+from pibox import Player, Playlist, importPlaylists
+from functools import partial
 
 
 class Button:
@@ -38,14 +11,13 @@ class Button:
         self.pinLED = pinLED
         self.ID = ID
         self.player = player
-        GPIO.setup(self.pinSwitch, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
-        self.handler = ButtonHandler(self.pinSwitch, self.down, self.up, 100)
-        self.handler.start()
-        GPIO.add_event_detect(self.pinSwitch, GPIO.RISING, callback=self.handler)
-        GPIO.setup(self.pinLED, GPIO.OUT)
-        GPIO.output(self.pinLED, GPIO.HIGH)
+        self.button = gz.Button(self.pinSwitch, pull_up=False)
+        self.led = gz.LED(pinLED, active_high=False)
+        self.led.off()
+        self.button.when_pressed = self.down
+        self.button.when_released = self.up
         
-    def down(self, args):
+    def down(self):
         if not self.lock:
             try:
                 if self.ID == 0:
@@ -59,16 +31,16 @@ class Button:
             except:
                 print("not ready yet")
                 pass
-        GPIO.output(self.pinLED, GPIO.LOW)
+        self.led.on()
     
     def up(self, args):
-        GPIO.output(self.pinLED, GPIO.HIGH)
-    
+        self.led.off()
+        
     def on(self):
-        GPIO.output(self.pinLED, GPIO.LOW)
-    
+        self.led.on()
+        
     def off(self):
-        GPIO.output(self.pinLED, GPIO.HIGH)
+        self.led.off()
         
     def lockUnlock(self):
         self.lock = not self.lock
@@ -76,6 +48,7 @@ class Button:
     
 
 if __name__ == "__main__":
+    import time
     def startSignal(buttons):
         for b in buttons:
             b.on()
@@ -85,16 +58,9 @@ if __name__ == "__main__":
             time.sleep(0.2)
 
 
-    playlists = []
-    for playlistDir in glob.glob("/home/pi/pibox/data/playlists/*"):
-        if os.path.isdir(playlistDir):
-            print playlistDir
-            playlists.append(Playlist(playlistDir))
+    playlists = importPlaylists()
 
     player = Player(playlists)
-
-    GPIO.setwarnings(False) # Ignore warning for now
-    GPIO.setmode(GPIO.BCM) # Use physical pin numbering
 
     but0 = Button(24, 13, 0, player)
     but1 = Button(22, 5, 1, player)
@@ -107,4 +73,4 @@ if __name__ == "__main__":
     print("started")
     while(True):
         pass
-    GPIO.cleanup() # Clean up
+
