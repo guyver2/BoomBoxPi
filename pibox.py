@@ -117,6 +117,7 @@ class Player:
         pygame.init()
         pygame.display.set_mode((1,1))
         pygame.mixer.init()
+        pygame.mixer.music.set_volume(self.volume)
         pygame.mixer.music.set_endevent(SONG_END)
         self.alive = True
         if(self.playlists is not None and len(self.playlists) > 0):
@@ -144,6 +145,7 @@ class Player:
     def play(self):
         if self.playing and self.paused :
             pygame.mixer.music.unpause()
+            pygame.mixer.music.set_volume(self.volume)
             print "unpause", self.currentTrack
             self.paused = False
         else:
@@ -181,6 +183,7 @@ class Player:
     def next(self):
         self.currentTrack = self.currentPlaylist.next()
         pygame.mixer.music.load(self.currentTrack.path)
+        pygame.mixer.music.set_volume(self.volume)
         pygame.mixer.music.play(0)
         print "now playing", self.currentTrack
         self.playing = True
@@ -189,6 +192,7 @@ class Player:
     def prev(self):
         self.currentTrack = self.currentPlaylist.prev()
         pygame.mixer.music.load(self.currentTrack.path)
+        pygame.mixer.music.set_volume(self.volume)
         pygame.mixer.music.play(0)
         print "now playing", self.currentTrack
         self.playing = True
