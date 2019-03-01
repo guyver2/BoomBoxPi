@@ -1,0 +1,6 @@
+test:
+  image: python:3.6
+  script:
+    - apt-get update -qy
+    - pip install -r requirements.txt
+    - nosetests -v --nocapture
