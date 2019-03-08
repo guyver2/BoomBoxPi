@@ -1,6 +1,10 @@
 test:
   image: python:3.6
+  stage: test
   script:
     - apt-get update -qy
     - pip install -r requirements.txt
-    - nosetests -v --nocapture
+    - nosetests -v --nocapture --with-xunit --xunit-file=report.xml
+  artifacts:
+      reports:
+          junit: report.xml
