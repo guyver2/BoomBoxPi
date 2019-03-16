@@ -8,6 +8,7 @@ import os
 import time
 from pibox import Player, Playlist, importPlaylists
 from button import Button
+from pot import Potentiometer
 
 
 app = Flask(__name__)
@@ -73,7 +74,7 @@ if __name__ == "__main__":
     but2 = Button(23, 12, 2, player)
     but3 = Button(6, 27, 3, player)
     buttons = [but0, but1, but3, but2]
-    
     startSignal()
-
+    pot = Potentiometer(player)
+    
     app.run(host='0.0.0.0')
