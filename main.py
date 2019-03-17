@@ -16,6 +16,7 @@ app = Flask(__name__)
 player = None
 lock = False
 buttons = []
+pot = None
 
 @app.route("/", methods=['GET', 'POST'])
 def index():
@@ -39,6 +40,7 @@ def index():
     if "lock" in request.form:
         for b in buttons:
             b.lockUnlock()
+	pot.lockUnlock()
     if "mute" in request.form:
         player.setVolume(0)
     if "nextPlaylist" in request.form:
