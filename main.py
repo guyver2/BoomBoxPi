@@ -1,14 +1,20 @@
 from flask import Flask
 from flask import render_template, request
-
-import RPi.GPIO as GPIO # Import Raspberry Pi GPIO library
+import os
+if os.name == 'nt':
+    RPI_MODE = False
+else:
+    RPI_MODE = True
 import threading
 import glob
 import os
 import time
 from pibox import Player, Playlist, importPlaylists
-from button import Button
-from pot import Potentiometer
+if RPI_MODE:
+    from button import Button
+    from pot import Potentiometer
+else:
+    from fake import Button, Potentiometer
 
 
 app = Flask(__name__)
@@ -40,7 +46,7 @@ def index():
     if "lock" in request.form:
         for b in buttons:
             b.lockUnlock()
-	pot.lockUnlock()
+        pot.lockUnlock()
     if "mute" in request.form:
         player.setVolume(0)
     if "nextPlaylist" in request.form:
@@ -67,16 +73,13 @@ if __name__ == "__main__":
     
     player = Player(playlists)
 
-
-    GPIO.setwarnings(False) # Ignore warning for now
-    GPIO.setmode(GPIO.BCM) # Use physical pin numbering
-
-    but0 = Button(24, 13, 0, player)
-    but1 = Button(22, 5, 1, player)
-    but2 = Button(23, 12, 2, player)
-    but3 = Button(6, 27, 3, player)
-    buttons = [but0, but1, but3, but2]
-    startSignal()
-    pot = Potentiometer(player)
+    if RPI_MODE:
+        but0 = Button(24, 13, 0, player)
+        but1 = Button(22, 5, 1, player)
+        but2 = Button(23, 12, 2, player)
+        but3 = Button(6, 27, 3, player)
+        buttons = [but0, but1, but3, but2]
+        startSignal()
+        pot = Potentiometer(player)
     
     app.run(host='0.0.0.0')

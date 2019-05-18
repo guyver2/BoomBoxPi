@@ -1,7 +1,7 @@
 import io
 import fcntl
 import time
-import thread
+import _thread
 
 i2c_address = 0x4d # got it from i2cdetect -y 1
 I2C_SLAVE_COMMAND=0x0703
@@ -16,7 +16,7 @@ class Potentiometer:
 		self.player = player
 		self.value = None
 		if player is not None:
-			thread.start_new_thread(Potentiometer.watchdog, (self,))
+			_thread.start_new_thread(Potentiometer.watchdog, (self,))
 
 	def lockUnlock(self):
 		self.lock = not self.lock
