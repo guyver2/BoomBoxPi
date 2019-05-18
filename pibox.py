@@ -6,6 +6,7 @@ if True: # fake screen for raspberry pi
 
 from mutagen.easyid3 import EasyID3
 from mutagen.mp3 import MP3
+import mutagen.mp3
 import random
 import pygame
 from time import sleep
@@ -22,14 +23,20 @@ class Track:
         self.path = path
         self.valid = os.path.isfile(path)
         if self.valid:
-            tag = EasyID3(path)
-            self.artist = unicode(tag["artist"][0]).encode("utf8")
-            self.artist = unicodedata.normalize('NFKD', unicode(self.artist, "utf8")).encode('ascii','ignore')
-            self.album = unicode(tag["album"][0]).encode("utf8")
-            self.album = unicodedata.normalize('NFKD', unicode(self.album, "utf8")).encode('ascii','ignore')
-            self.title = unicode(tag["title"][0]).encode("utf8")
-            self.title = unicodedata.normalize('NFKD', unicode(self.title, "utf8")).encode('ascii','ignore')
-            self.length = MP3(path).info.length
+			try:
+				tag = EasyID3(path)
+				self.artist = unicode(tag["artist"][0]).encode("utf8")
+				self.artist = unicodedata.normalize('NFKD', unicode(self.artist, "utf8")).encode('ascii','ignore')
+				self.album = unicode(tag["album"][0]).encode("utf8")
+				self.album = unicodedata.normalize('NFKD', unicode(self.album, "utf8")).encode('ascii','ignore')
+				self.title = unicode(tag["title"][0]).encode("utf8")
+				self.title = unicodedata.normalize('NFKD', unicode(self.title, "utf8")).encode('ascii','ignore')
+				self.length = MP3(path).info.length
+			except:
+				self.artist = unicode("unknown").encode("utf8")
+				self.album = unicode("unknown").encode("utf8")
+				self.title = unicode("unknown").encode("utf8")
+				self.length = 10
             
     def __repr__(self):
         return "%s - %s"%(self.artist, self.title)
@@ -124,6 +131,13 @@ class Player:
             self.setPlaylist(self.playlists[0])
         thread.start_new_thread(Player.watchdog, (self,))
     
+    def resetMixer(self, freq):
+        pygame.mixer.quit()
+        pygame.mixer.init(frequency=freq)
+        pygame.mixer.music.set_volume(self.volume)
+        pygame.mixer.music.set_endevent(SONG_END)
+
+    
     def __del__(self):
         self.alive = False
     
@@ -150,8 +164,8 @@ class Player:
             self.paused = False
         else:
             self.currentTrack = self.currentPlaylist.current()
+            self.resetMixer(mutagen.mp3.MP3(self.currentTrack.path).info.sample_rate)
             pygame.mixer.music.load(self.currentTrack.path)
-            pygame.mixer.music.set_volume(self.volume)
             pygame.mixer.music.play(0)
             print "now playing", self.currentTrack
             self.playing = True
@@ -182,6 +196,7 @@ class Player:
 
     def next(self):
         self.currentTrack = self.currentPlaylist.next()
+        self.resetMixer(mutagen.mp3.MP3(self.currentTrack.path).info.sample_rate)
         pygame.mixer.music.load(self.currentTrack.path)
         pygame.mixer.music.set_volume(self.volume)
         pygame.mixer.music.play(0)
@@ -191,6 +206,7 @@ class Player:
     
     def prev(self):
         self.currentTrack = self.currentPlaylist.prev()
+        self.resetMixer(mutagen.mp3.MP3(self.currentTrack.path).info.sample_rate)
         pygame.mixer.music.load(self.currentTrack.path)
         pygame.mixer.music.set_volume(self.volume)
         pygame.mixer.music.play(0)

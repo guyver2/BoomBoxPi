@@ -1,4 +1,5 @@
 import gpiozero as gz
+import sys
 
 from pibox import Player, Playlist, importPlaylists
 from functools import partial
@@ -29,7 +30,7 @@ class Button:
                 if self.ID == 3:
                     self.player.next()
             except:
-                print("not ready yet")
+                print("not ready yet", sys.exc_info()[0])
                 pass
         self.led.on()
     
