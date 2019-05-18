@@ -1,10 +1,13 @@
-import smbus
+import io
+import fcntl
 import time
 import thread
 
-bus = smbus.SMBus(1)  # RPi revision 2 (0 for revision 1)
 i2c_address = 0x4d # got it from i2cdetect -y 1
-control_byte = 0x01 # to read channel 0
+I2C_SLAVE_COMMAND=0x0703
+# set device address
+FileHandle =  io.open("/dev/i2c-1", "rb", buffering=0)
+fcntl.ioctl(FileHandle, I2C_SLAVE_COMMAND, i2c_address)
 
 
 class Potentiometer:
@@ -19,10 +22,12 @@ class Potentiometer:
 		self.lock = not self.lock
 
 	def watchdog(self):
+		global FileHandle
 		while self.player.alive:
-            		data = int(bus.read_byte_data(i2c_address, control_byte))
-			if self.value != data:
+			values = list(FileHandle.read(2))
+			data = (ord(values[0]) * 256 + ord(values[1])) / 4
+			if self.value == None or abs(self.value - data) > 3:
 				if not self.lock:
-					self.player.setVolume(data*3)
+					self.player.setVolume(data/20)
 				self.value = data
 			time.sleep(0.05)
