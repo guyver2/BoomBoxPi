@@ -19,6 +19,7 @@ class Button:
         self.button.when_released = self.up
         
     def down(self):
+        self.led.on()
         if not self.lock:
             try:
                 if self.ID == 0:
@@ -32,7 +33,6 @@ class Button:
             except:
                 print("not ready yet", sys.exc_info()[0])
                 pass
-        self.led.on()
     
     def up(self, args):
         self.led.off()
