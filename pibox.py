@@ -13,10 +13,15 @@ import pygame
 from time import sleep
 import threading
 import pickle
-import unicodedata
+import uuid
+from pathlib import Path
 
 SONG_END = pygame.USEREVENT + 1
 
+
+def get_uuid():
+    full_uuid = uuid.uuid4()
+    return full_uuid.hex[0:6]
 
 class Track:
 
@@ -25,27 +30,31 @@ class Track:
             return
         self.path = path
         self.valid = os.path.isfile(path)
+        self.hash = get_uuid()
         if self.valid:
             try:
                 tag = EasyID3(path)
-                self.title = tag["title"][0].encode("utf8")
-                self.title = unicodedata.normalize('NFKD', self.title).encode(
-                    'ascii', 'ignore')
+                self.title = tag["title"][0]
             except:
-                self.title = "unknown".encode("utf8")
+                self.title = Path(path).stem
 
     def __repr__(self):
-        return self.title
+        if isinstance(self.title, bytes):
+            return self.title.decode("ASCII")
+        else :
+            return self.title
 
     def toDict(self):
         result = {}
         result["path"] = self.path
         result["title"] = self.title
+        result['hash'] = self.hash
         return result
 
     def fromDict(self, data):
         self.path = data["path"]
         self.title = data["title"]
+        self.hash = data["hash"]
         self.valid = os.path.isfile(self.path)
 
 
@@ -57,23 +66,27 @@ class Playlist:
         self.tracks = []
         self.loadTracks()
         self.trackID = 0
+        self.hash = get_uuid()
 
     def toDict(self):
         result = {}
         result["path"] = self.path
         result["name"] = self.name
         result["tracks"] = [track.toDict() for track in self.tracks]
+        result['hash'] = self.hash
         return result
 
     def fromDict(self, data):
         self.path = data["path"]
         self.name = data["name"]
+        self.hash = data["hash"]
         self.tracks = []
         for track in data["tracks"]:
             t = Track()
             t.fromDict(track)
-            self.tracks.append(t)
-        self.trackID = -0
+            if t.valid:
+                self.tracks.append(t)
+        self.trackID = 0
 
     def loadTracks(self):
         for trackFile in sorted(glob.glob(self.path + "/*")):
@@ -102,6 +115,7 @@ class Player:
 
     def __init__(self, playlists):
         global SONG_END
+        self.lock = threading.RLock()
         self.volume = 0.05
         self.muted = False
         self.volumeMax = 100
@@ -137,52 +151,57 @@ class Player:
         return self.currentPlaylist.name + " - " + str(self.currentTrack)
 
     def setPlaylists(self, playlists):
-        self.stop()
-        self.playlists = playlists
-        if (self.playlists is not None and len(self.playlists) > 0):
-            self.setPlaylist(self.playlists[0])
+        with self.lock:
+            self.stop()
+            self.playlists = playlists
+            if (self.playlists is not None and len(self.playlists) > 0):
+                self.setPlaylist(self.playlists[0])
 
     def setPlaylist(self, playlist):
-        self.stop()
-        self.currentPlaylist = playlist
-        if self.shuffleMode:
-            self.shuffle()
-        print("using playlist", self.currentPlaylist.name)
-        print(self.currentPlaylist)
+        with self.lock:
+            self.stop()
+            self.currentPlaylist = playlist
+            if self.shuffleMode:
+                self.shuffle()
+            print("using playlist", self.currentPlaylist.name)
 
     def play(self):
-        if self.playing and self.paused:
-            pygame.mixer.music.unpause()
-            pygame.mixer.music.set_volume(self.volume)
-            print("unpause", self.currentTrack)
-            self.paused = False
-        else:
-            self.currentTrack = self.currentPlaylist.current()
-            self.resetMixer(
-                mutagen.mp3.MP3(self.currentTrack.path).info.sample_rate)
-            pygame.mixer.music.load(self.currentTrack.path)
-            pygame.mixer.music.play(0)
-            print("now playing", self.currentTrack)
-            self.playing = True
-            self.paused = False
+        with self.lock:
+            if self.playing and self.paused:
+                pygame.mixer.music.unpause()
+                pygame.mixer.music.set_volume(self.volume)
+                print("unpause", self.currentTrack)
+                self.paused = False
+            else:
+                self.currentTrack = self.currentPlaylist.current()
+                self.resetMixer(
+                    mutagen.mp3.MP3(self.currentTrack.path).info.sample_rate)
+                pygame.mixer.music.load(self.currentTrack.path)
+                pygame.mixer.music.play(0)
+                print("now playing", self.currentTrack)
+                self.playing = True
+                self.paused = False
 
     def stop(self):
-        self.playing = False
-        self.paused = False
-        self.currentTrack = None
-        pygame.mixer.music.stop()
+        with self.lock:
+            self.playing = False
+            self.paused = False
+            self.currentTrack = None
+            pygame.mixer.music.stop()
 
     def pause(self):
-        if not self.paused:
-            pygame.mixer.music.pause()
-            print("pause", self.currentTrack)
-            self.paused = True
+        with self.lock:
+            if not self.paused:
+                pygame.mixer.music.pause()
+                print("pause", self.currentTrack)
+                self.paused = True
 
     def playPause(self):
-        if self.playing and not self.paused:
-            self.pause()
-        else:
-            self.play()
+        with self.lock:
+            if self.playing and not self.paused:
+                self.pause()
+            else:
+                self.play()
 
     def shuffle(self, onOrOff=True):
         self.shuffleMode = onOrOff
@@ -190,48 +209,79 @@ class Player:
             self.currentPlaylist.shuffle()
 
     def next(self):
-        self.currentTrack = self.currentPlaylist.next()
-        self.resetMixer(
-            mutagen.mp3.MP3(self.currentTrack.path).info.sample_rate)
-        pygame.mixer.music.load(self.currentTrack.path)
-        pygame.mixer.music.set_volume(self.volume)
-        pygame.mixer.music.play(0)
-        print("now playing", self.currentTrack)
-        self.playing = True
-        self.paused = False
+        with self.lock:
+            self.currentTrack = self.currentPlaylist.next()
+            self.resetMixer(
+                mutagen.mp3.MP3(self.currentTrack.path).info.sample_rate)
+            pygame.mixer.music.load(self.currentTrack.path)
+            pygame.mixer.music.set_volume(self.volume)
+            pygame.mixer.music.play(0)
+            print("now playing", self.currentTrack)
+            self.playing = True
+            self.paused = False
 
     def prev(self):
-        self.currentTrack = self.currentPlaylist.prev()
-        self.resetMixer(
-            mutagen.mp3.MP3(self.currentTrack.path).info.sample_rate)
-        pygame.mixer.music.load(self.currentTrack.path)
-        pygame.mixer.music.set_volume(self.volume)
-        pygame.mixer.music.play(0)
-        print("now playing", self.currentTrack)
-        self.playing = True
-        self.paused = False
+        with self.lock:
+            self.currentTrack = self.currentPlaylist.prev()
+            self.resetMixer(
+                mutagen.mp3.MP3(self.currentTrack.path).info.sample_rate)
+            pygame.mixer.music.load(self.currentTrack.path)
+            pygame.mixer.music.set_volume(self.volume)
+            pygame.mixer.music.play(0)
+            print("now playing", self.currentTrack)
+            self.playing = True
+            self.paused = False
 
     def nextPlaylist(self):
-        self.playlistID = (self.playlistID + 1) % len(self.playlists)
-        self.setPlaylist(self.playlists[self.playlistID])
-        self.next()
+        with self.lock:
+            self.playlistID = (self.playlistID + 1) % len(self.playlists)
+            self.setPlaylist(self.playlists[self.playlistID])
+            self.next()
 
     def prevPlaylist(self):
-        self.playlistID = (self.playlistID - 1) % len(self.playlists)
-        self.setPlaylist(self.playlists[self.playlistID])
-        self.next()
+        with self.lock:
+            self.playlistID = (self.playlistID - 1) % len(self.playlists)
+            self.setPlaylist(self.playlists[self.playlistID])
+            self.next()
 
     def getTrackPos(self):
-        if self.playing:
-            return pygame.mixer.music.get_pos()
+        with self.lock:
+            if self.playing:
+                return pygame.mixer.music.get_pos()
 
     def setVolume(self, vol):
-        self.volume = vol / 100.0
-        if self.playing:
-            pygame.mixer.music.set_volume(self.volume)
+        with self.lock:
+            self.volume = vol / 100.0
+            if self.playing and pygame.mixer.get_init() is not None:
+                pygame.mixer.music.set_volume(self.volume)
 
     def getVolume(self):
         return self.volume * 100
+
+    def request(self, path):
+        with self.lock:
+            print("requested:", path)
+            data = path.split()
+            if len(data)<2:
+                print("Error: Invalid request")
+                return
+            flag = data.pop(0)
+            uid = data.pop(0)
+            if(flag == "p"):
+                for p in self.playlists:
+                    if uid == p.hash:
+                        self.setPlaylist(p) 
+                        self.play()
+                        return
+            if(flag == "t"):
+                for p in self.playlists:
+                    for i, t in enumerate(p.tracks):
+                        if uid == t.hash:
+                            p.trackID = i
+                            self.setPlaylist(p)
+                            self.play()
+                            return
+            print("no match found, or invalid request")
 
     def watchdog(self):
         global SONG_END
@@ -256,14 +306,19 @@ def importPlaylists():
         for playlistDir in glob.glob("data/playlists/*"):
             if os.path.isdir(playlistDir):
                 playlists.append(Playlist(playlistDir))
-        with open("data/playlists.dat", "wb") as write_file:
-            pickle.dump(playlists, write_file)
+        with open("data/playlists.json", "w") as write_file:
+            data = {"playlists":[p.toDict() for p in playlists]}
+            json.dump(data, write_file)
     print("done loading playlists", len(playlists))
     return playlists
 
 
 if __name__ == "__main__":
     playlists = importPlaylists()
+    for p in playlists:
+        print("[p]", p.name, p.hash)
+        for t in p.tracks:
+            print("  *", t.title, t.hash)
 
     for p in playlists:
         print(p.name, len(p.tracks))

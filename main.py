@@ -7,6 +7,7 @@ import time
 from pibox import Player, Playlist, importPlaylists
 from button import Button
 from pot import Potentiometer
+from nfc import NFC
 
 app = Flask(__name__)
 
@@ -123,5 +124,6 @@ if __name__ == "__main__":
     buttons = [but0, but1, but3, but2]
     startSignal()
     pot = Potentiometer(player)
+    nfc = NFC(player)
 
     app.run(host='0.0.0.0')
