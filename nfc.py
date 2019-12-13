@@ -9,7 +9,6 @@ class NFC:
     WRITE = 1
 
     def __init__(self, player):
-        self.last_read = None
         self.reader = SimpleMFRC522()
         self.player = player
         self.mode = NFC.READ
@@ -22,14 +21,19 @@ class NFC:
             while self.player.alive:
                 if self.mode == NFC.READ:
                     id, text = self.reader.read_no_block()
-                    if (id != None) and (text != self.last_read):
-                        self.last_read = text
-                        self.player.request(self.last_read)
+                    if (id != None):
+                        splits = text.split()
+                        if len(splits) >= 2:
+                            hashRequest = splits[1]
+                            if self.player.currentTrack is not None and hashRequest == self.player.currentTrack.hash:
+                                continue
+                            if self.player.currentPlaylist is not None and hashRequest == self.player.currentPlaylist.hash:
+                                continue
+                            self.player.request(text)
                 if self.mode == NFC.WRITE:
                     id, text = self.reader.write_no_block("t " + self.player.currentTrack.hash + " " + self.player.currentTrack.title)
                     if id is not None:
                         print("nfc written")
-                        self.last_read = text
                         self.mode = NFC.READ
         finally:
             GPIO.cleanup()
