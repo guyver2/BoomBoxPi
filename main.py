@@ -15,6 +15,7 @@ player = None
 lock = False
 buttons = []
 pot = None
+nfc = None
 
 
 @app.route('/js/<path:path>')
@@ -36,6 +37,7 @@ def send_img(path):
 def index():
     global player
     global lock
+    global nfc
     try:
         volume = request.form['volume']
     except:
@@ -59,6 +61,8 @@ def index():
         player.setVolume(0)
     if "nextPlaylist" in request.form:
         player.nextPlaylist()
+    if "NFC" in request.form:
+        nfc.switchMode()
 
     np = player.nowPlaying()
 

@@ -37,6 +37,12 @@ class NFC:
                         self.mode = NFC.READ
         finally:
             GPIO.cleanup()
+    
+    def switchMode(self):
+        if self.mode == NFC.READ:
+            self.mode = NFC.WRITE
+        else:
+            self.mode = NFC.READ
 
 
 if __name__ == "__main__":
