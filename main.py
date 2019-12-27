@@ -1,13 +1,24 @@
 from flask import Flask
 from flask import render_template, request, send_from_directory
-
+import os
+if os.name == 'nt':
+    RPI_MODE = False
+else:
+    RPI_MODE = True
+import threading
 import glob
 import os
 import time
 from pibox import Player, Playlist, importPlaylists
-from button import Button
-from pot import Potentiometer
-from nfc import NFC
+
+
+if RPI_MODE:
+    from button import Button
+    from pot import Potentiometer
+    from nfc import NFC
+else:
+    from fake import Button, Potentiometer, NFC
+
 
 app = Flask(__name__)
 
