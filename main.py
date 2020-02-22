@@ -4,6 +4,7 @@ from flask import render_template, request, send_from_directory
 import glob
 import os
 import time
+from boomboxDB import BoomboxDB
 from pibox import Player, Playlist, importPlaylists
 from button import Button
 from pot import Potentiometer
@@ -61,8 +62,10 @@ def index():
         player.setVolume(0)
     if "nextPlaylist" in request.form:
         player.nextPlaylist()
-    if "NFC" in request.form:
-        nfc.switchMode()
+    if "NFC_T" in request.form:
+        nfc.switchMode(NFC.WRITE_TRACK)
+    if "NFC_P" in request.form:
+        nfc.switchMode(NFC.WRITE_PLAYLIST)
 
     np = player.nowPlaying()
 
@@ -116,8 +119,9 @@ def startSignal():
 
 
 if __name__ == "__main__":
-
-    playlists = importPlaylists()
+    bbdb = BoomboxDB()
+    bbdb.process_dump()
+    playlists = bbdb.get_playlists()
 
     player = Player(playlists)
 

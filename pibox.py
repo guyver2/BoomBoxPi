@@ -1,6 +1,7 @@
 import glob
 import os
 import json
+from config import Config
 
 if True:    # fake screen for raspberry pi
     os.environ['SDL_VIDEODRIVER'] = 'dummy'
@@ -23,78 +24,32 @@ def get_uuid():
     full_uuid = uuid.uuid4()
     return full_uuid.hex[0:6]
 
+
 class Track:
 
-    def __init__(self, path=""):
-        if path == "":
-            return
-        self.path = path
-        self.valid = os.path.isfile(path)
-        self.hash = get_uuid()
-        if self.valid:
-            try:
-                tag = EasyID3(path)
-                self.title = tag["title"][0]
-            except:
-                self.title = Path(path).stem
+    def __init__(self, uid, title, artist, hidden, nb_plays):
+        self.title = title
+        self.artist = artist
+        self.hidden = hidden
+        self.nb_plays = nb_plays
+        self.hash = uid
+        self.path = Config.TRACKS_FOLDER + "%06d.mp3" % uid
 
     def __repr__(self):
-        if isinstance(self.title, bytes):
-            return self.title.decode("ASCII")
-        else :
+        if self.artist is not None:
+            return self.title + " by " + self.artist
+        else:
             return self.title
-
-    def toDict(self):
-        result = {}
-        result["path"] = self.path
-        result["title"] = self.title
-        result['hash'] = self.hash
-        return result
-
-    def fromDict(self, data):
-        self.path = data["path"]
-        self.title = data["title"]
-        self.hash = data["hash"]
-        self.valid = os.path.isfile(self.path)
 
 
 class Playlist:
 
-    def __init__(self, path):
-        self.name = os.path.basename(path)
-        self.path = path
-        self.tracks = []
-        self.loadTracks()
+    def __init__(self, uid, name, tracks, hidden):
+        self.name = name
+        self.hash = uid
+        self.tracks = tracks
         self.trackID = 0
-        self.hash = get_uuid()
-
-    def toDict(self):
-        result = {}
-        result["path"] = self.path
-        result["name"] = self.name
-        result["tracks"] = [track.toDict() for track in self.tracks]
-        result['hash'] = self.hash
-        return result
-
-    def fromDict(self, data):
-        self.path = data["path"]
-        self.name = data["name"]
-        self.hash = data["hash"]
-        self.tracks = []
-        for track in data["tracks"]:
-            t = Track()
-            t.fromDict(track)
-            if t.valid:
-                self.tracks.append(t)
-        self.trackID = 0
-
-    def loadTracks(self):
-        for trackFile in sorted(glob.glob(self.path + "/*")):
-            if os.path.isfile(trackFile) and trackFile.lower().endswith("mp3"):
-                self.tracks.append(Track(trackFile))
-
-    def isValidFile(self, trackFile):
-        if not os.path.isFile(trackFile): return False
+        self.hidden = hidden
 
     def current(self):
         return self.tracks[self.trackID]
@@ -135,7 +90,7 @@ class Player:
         self.alive = True
         if (self.playlists is not None and len(self.playlists) > 0):
             self.setPlaylist(self.playlists[0])
-        self.thread = threading.Thread(target = self.watchdog)
+        self.thread = threading.Thread(target=self.watchdog)
         self.thread.start()
 
     def resetMixer(self, freq):
@@ -174,6 +129,7 @@ class Player:
                 self.paused = False
             else:
                 self.currentTrack = self.currentPlaylist.current()
+                print("gonna play", self.currentTrack.path)
                 self.resetMixer(
                     mutagen.mp3.MP3(self.currentTrack.path).info.sample_rate)
                 pygame.mixer.music.load(self.currentTrack.path)
@@ -262,18 +218,18 @@ class Player:
         with self.lock:
             print("requested:", path)
             data = path.split()
-            if len(data)<2:
+            if len(data) < 2:
                 print("Error: Invalid request")
                 return
             flag = data.pop(0)
-            uid = data.pop(0)
-            if(flag == "p"):
+            uid = int(data.pop(0))
+            if (flag == "p"):
                 for p in self.playlists:
                     if uid == p.hash:
-                        self.setPlaylist(p) 
+                        self.setPlaylist(p)
                         self.play()
                         return
-            if(flag == "t"):
+            if (flag == "t"):
                 for p in self.playlists:
                     for i, t in enumerate(p.tracks):
                         if uid == t.hash:
@@ -289,6 +245,7 @@ class Player:
             for event in pygame.event.get():
                 if event.type == SONG_END:
                     print("song ended, playing next one")
+                    self.currentTrack.nb_plays += 1
                     self.next()
 
 
@@ -307,7 +264,7 @@ def importPlaylists():
             if os.path.isdir(playlistDir):
                 playlists.append(Playlist(playlistDir))
         with open("data/playlists.json", "w") as write_file:
-            data = {"playlists":[p.toDict() for p in playlists]}
+            data = {"playlists": [p.toDict() for p in playlists]}
             json.dump(data, write_file)
     print("done loading playlists", len(playlists))
     return playlists
