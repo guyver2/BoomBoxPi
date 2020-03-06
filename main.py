@@ -19,28 +19,28 @@ pot = None
 nfc = None
 
 
-@app.route('/js/<path:path>')
+@app.route("/js/<path:path>")
 def send_js(path):
-    return send_from_directory('js', path)
+    return send_from_directory("js", path)
 
 
-@app.route('/css/<path:path>')
+@app.route("/css/<path:path>")
 def send_css(path):
-    return send_from_directory('css', path)
+    return send_from_directory("css", path)
 
 
-@app.route('/img/<path:path>')
+@app.route("/img/<path:path>")
 def send_img(path):
-    return send_from_directory('img', path)
+    return send_from_directory("img", path)
 
 
-@app.route("/", methods=['GET', 'POST'])
+@app.route("/", methods=["GET", "POST"])
 def index():
     global player
     global lock
     global nfc
     try:
-        volume = request.form['volume']
+        volume = request.form["volume"]
     except:
         volume = player.getVolume()
 
@@ -69,18 +69,18 @@ def index():
 
     np = player.nowPlaying()
 
-    return render_template('index.html', now_playing=np, volume=volume)
+    return render_template("index.html", now_playing=np, volume=volume)
 
 
 send_from_directory
 
 
-@app.route("/new", methods=['GET', 'POST'])
+@app.route("/new", methods=["GET", "POST"])
 def newIndex():
     global player
     global lock
     try:
-        volume = request.form['volume']
+        volume = request.form["volume"]
     except:
         volume = player.getVolume()
 
@@ -103,9 +103,24 @@ def newIndex():
     if "nextPlaylist" in request.form:
         player.nextPlaylist()
 
-    np = player.nowPlaying()
-
-    return render_template('index_new.html', now_playing=np, volume=volume)
+    np = player.nowPlaying().replace("_", " ")
+    locked = pot.lock
+    muted = player.volume == 0
+    playlists = [p.name.replace("_", " ") for p in player.playlists]
+    tracks = [t.title.replace("_", " ") for t in player.currentPlaylist.tracks]
+    pid = player.playlistID
+    tid = player.currentPlaylist.trackID
+    return render_template(
+        "index_new.html",
+        now_playing=np,
+        volume=volume,
+        locked=locked,
+        muted=muted,
+        playlists=playlists,
+        pid=pid,
+        tracks=tracks,
+        tid=tid,
+    )
 
 
 def startSignal():
@@ -134,4 +149,4 @@ if __name__ == "__main__":
     pot = Potentiometer(player)
     nfc = NFC(player)
 
-    app.run(host='0.0.0.0')
+    app.run(host="0.0.0.0")
