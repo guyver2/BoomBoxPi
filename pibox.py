@@ -103,7 +103,22 @@ class Player:
         self.alive = False
 
     def nowPlaying(self):
-        return self.currentPlaylist.name + " - " + str(self.currentTrack)
+        try:
+            ret = self.currentPlaylist.name + " - " + str(self.currentTrack)
+        except:
+            ret = 'hello'
+
+        return ret
+
+    def nowPlayingApi(self):
+        ret = {}
+        ret['track'] = str(self.currentTrack)
+        ret['playlist'] = self.currentPlaylist.name
+        ret['volume'] = self.volume
+        ret['isPlaying'] = self.playing
+        ret['isPaused'] = self.paused
+
+        return ret
 
     def setPlaylists(self, playlists):
         with self.lock:
@@ -251,8 +266,8 @@ class Player:
 
 def importPlaylists():
     playlists = []
-    if os.path.isfile("data/playlists.json"):
-        with open('data/playlists.json') as f:
+    if os.path.isfile("{}playlists.json".format(Config.DATA)):
+        with open('{}playlists.json'.format(Config.DATA)) as f:
             data = json.load(f)
             for p in data["playlists"]:
                 play = Playlist("fake")
@@ -260,10 +275,10 @@ def importPlaylists():
                 if len(play.tracks) != 0:
                     playlists.append(play)
     else:
-        for playlistDir in glob.glob("data/playlists/*"):
+        for playlistDir in glob.glob('{}playlists\\*'.format(Config.DATA)):
             if os.path.isdir(playlistDir):
                 playlists.append(Playlist(playlistDir))
-        with open("data/playlists.json", "w") as write_file:
+        with open('{}playlists.json'.format(Config.DATA), "w") as write_file:
             data = {"playlists": [p.toDict() for p in playlists]}
             json.dump(data, write_file)
     print("done loading playlists", len(playlists))

@@ -41,7 +41,7 @@ def extract_tags(filename):
 class BoomboxDB:
 
     def __init__(self):
-        self.db_file = Config.DATA + "/boombox.db"
+        self.db_file = Config.DATA + "boombox.db"
         self.connection = None
         self.create_connection()
         self.create_table_if_needed()

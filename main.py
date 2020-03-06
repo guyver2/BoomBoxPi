@@ -1,14 +1,26 @@
 from flask import Flask
-from flask import render_template, request, send_from_directory
+from flask import render_template, request, send_from_directory, jsonify
+
+import os
+if os.name == 'nt':
+    RPI_MODE = False
+else:
+    RPI_MODE = True
+import threading
+
 
 import glob
 import os
 import time
 from boomboxDB import BoomboxDB
 from pibox import Player, Playlist, importPlaylists
-from button import Button
-from pot import Potentiometer
-from nfc import NFC
+if RPI_MODE:
+    from button import Button
+    from pot import Potentiometer
+    from nfc import NFC
+else:
+    from fake import Button, Potentiometer, NFC
+
 
 app = Flask(__name__)
 
@@ -33,6 +45,30 @@ def send_css(path):
 def send_img(path):
     return send_from_directory('img', path)
 
+@app.route('/api/', methods=['GET'])
+def api_index():
+    global player
+    global lock
+
+    q = request.args.get('q')
+    if q == 'nowPlaying':
+        pass
+    if q == 'volume':
+        player.setVolume(int(float(request.args.get('value'))))
+    if q == 'play':
+        player.playPause()
+    if q == 'pause':
+        player.playPause()
+    if q == 'nextSong':
+        player.next()
+    if q == 'previousSong':
+        player.prev()
+    if q == 'nextPlayList':
+        player.nextPlaylist()
+    if q == 'previousPlayList':
+        player.prevPlaylist()
+
+    return jsonify(player.nowPlayingApi())
 
 @app.route("/", methods=['GET', 'POST'])
 def index():
@@ -72,7 +108,7 @@ def index():
     return render_template('index.html', now_playing=np, volume=volume)
 
 
-send_from_directory
+
 
 
 @app.route("/new", methods=['GET', 'POST'])
