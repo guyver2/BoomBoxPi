@@ -6,7 +6,6 @@ from functools import partial
 
 
 class Button:
-
     def __init__(self, pinSwitch, pinLED, ID, player):
         self.lock = False
         self.pinSwitch = pinSwitch
@@ -70,5 +69,5 @@ if __name__ == "__main__":
 
     startSignal([but0, but1, but3, but2])
 
-    while (True):
+    while True:
         pass
