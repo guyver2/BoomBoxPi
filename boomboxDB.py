@@ -13,7 +13,7 @@ import hashlib
 def get_hash(filename):
     BLOCK_SIZE = 65536
     hash = hashlib.sha1()
-    with open(filename, 'rb') as fd:
+    with open(filename, "rb") as fd:
         data = fd.read(BLOCK_SIZE)
         while len(data) > 0:
             hash.update(data)
@@ -39,9 +39,8 @@ def extract_tags(filename):
 
 
 class BoomboxDB:
-
     def __init__(self):
-        self.db_file = Config.DATA + "/boombox.db"
+        self.db_file = Config.DATA + "boombox.db"
         self.connection = None
         self.create_connection()
         self.create_table_if_needed()
@@ -137,8 +136,8 @@ class BoomboxDB:
         :return: (is it a new playlist), playlist uid
         """
         try:
-            sql = ''' INSERT INTO playlists(name)
-                    VALUES(?)'''
+            sql = """ INSERT INTO playlists(name)
+                    VALUES(?)"""
             cur = self.connection.cursor()
             cur.execute(sql, (name,))
             print("new playlist " + name)
@@ -162,8 +161,8 @@ class BoomboxDB:
         :return: (is it a new track), track uid
         """
         try:
-            sql = ''' INSERT INTO tracks(title, artist, sha1)
-                    VALUES(?,?,?)'''
+            sql = """ INSERT INTO tracks(title, artist, sha1)
+                    VALUES(?,?,?)"""
             cur = self.connection.cursor()
             cur.execute(sql, (title, artist, sha1))
             print("new track " + title)
@@ -177,10 +176,10 @@ class BoomboxDB:
         Delete a track an removes it from all playlists
         """
         try:
-            sql = '''DELETE FROM tracks WHERE id = ?'''
+            sql = """DELETE FROM tracks WHERE id = ?"""
             cur = self.connection.cursor()
             cur.execute(sql, (track_id,))
-            sql = '''DELETE FROM playlists_tracks WHERE track_id = ?'''
+            sql = """DELETE FROM playlists_tracks WHERE track_id = ?"""
             cur = self.connection.cursor()
             cur.execute(sql, (track_id,))
         except Exception as e:
@@ -188,8 +187,8 @@ class BoomboxDB:
 
     def add_song_to_playlist(self, playlist_id, track_id):
         try:
-            sql = ''' INSERT INTO playlists_tracks(playlist_id, track_id)
-                    VALUES(?,?)'''
+            sql = """ INSERT INTO playlists_tracks(playlist_id, track_id)
+                    VALUES(?,?)"""
             cur = self.connection.cursor()
             cur.execute(sql, (playlist_id, track_id))
             return cur.lastrowid
@@ -207,10 +206,10 @@ class BoomboxDB:
                 _, new_playlists[name] = self.add_playlist(name)
         self.connection.commit()
 
-        for track_file in Path(Config.DUMP_FOLDER).rglob('*.mp3'):
+        for track_file in Path(Config.DUMP_FOLDER).rglob("*.mp3"):
             track_file = str(track_file)
             if os.path.isfile(track_file):
-                local_filename = track_file[len(Config.DUMP_FOLDER):]
+                local_filename = track_file[len(Config.DUMP_FOLDER) :]
                 local_filename = local_filename.replace("\\", "/")
                 # add track
                 title, artist = extract_tags(track_file)
@@ -218,7 +217,7 @@ class BoomboxDB:
                 new_track, track_id = self.add_track(title, artist, sha1)
                 # check if the track belongs to a playlist
                 parts = local_filename.split("/")
-                if (len(parts) > 1):
+                if len(parts) > 1:
                     playlist = parts[0]
                     self.add_song_to_playlist(new_playlists[playlist], track_id)
                     print("song %s from %s" % (title, playlist))
@@ -226,14 +225,15 @@ class BoomboxDB:
                     print("song %s" % (title,))
             if track_id is not None and new_track:
                 try:
-                    shutil.move(track_file,
-                                Config.TRACKS_FOLDER + "%06d.mp3" % track_id)
+                    shutil.move(
+                        track_file, Config.TRACKS_FOLDER + "%06d.mp3" % track_id
+                    )
                 except Exception as _:
                     self.delete_track(track_id)
         self.connection.commit()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     bbdb = BoomboxDB()
     bbdb.process_dump()
     pl = bbdb.get_playlists()

@@ -1,7 +1,5 @@
 import gpiozero as gz
 import sys
-
-from pibox import Player, Playlist, importPlaylists
 from functools import partial
 
 
@@ -57,17 +55,3 @@ if __name__ == "__main__":
         for b in buttons:
             b.off()
             time.sleep(0.2)
-
-    playlists = importPlaylists()
-
-    player = Player(playlists)
-
-    but0 = Button(24, 13, 0, player)
-    but1 = Button(25, 5, 1, player)
-    but2 = Button(23, 6, 2, player)
-    but3 = Button(27, 12, 3, player)
-
-    startSignal([but0, but1, but3, but2])
-
-    while True:
-        pass

@@ -14,7 +14,7 @@
             <H1>La BoomBox de Jeanne</H1>
         </center>
         {% if now_playing %}
-        <h3>Now Playing : {{ now_playing }}</h3>
+        <h3 id="nowPlaying">Now Playing : {{ now_playing }}</h3>
         {% endif %}
         <div class="divider"></div>
         <div class="section">
@@ -23,18 +23,22 @@
                 <form id="playform" method="post">
                     <div class="row">
                         <div class="col s3 offset-s3">
-                            <a href="#!" class="btn-large btn-floating waves-effect waves-yellow white"></a>
+                            <a href='javascript:nextPlaylist();'
+                                class="btn-large btn-floating waves-effect waves-yellow white"></a>
                         </div>
                         <div class="col s3 offset-s1">
-                            <a href="#!" class="btn-large btn-floating waves-effect waves-ligth blue"></a>
+                            <a href='javascript:playPause();'
+                                class="btn-large btn-floating waves-effect waves-ligth blue"></a>
                         </div>
                     </div>
                     <div class="row">
                         <div class="col s3 offset-s3">
-                            <a href="#!" class="btn-large btn-floating waves-effect waves-light green"></a>
+                            <a href='javascript:prevSong();'
+                                class="btn-large btn-floating waves-effect waves-light green"></a>
                         </div>
                         <div class="col s3 offset-s1">
-                            <a href="#!" class="btn-large btn-floating waves-effect waves-light red"></a>
+                            <a href='javascript:nextSong();'
+                                class="btn-large btn-floating waves-effect waves-light red"></a>
                         </div>
                     </div>
                 </form>
@@ -58,12 +62,14 @@
                     <div class="row">
                         <form id="adminform" method="post">
                             <label>
-                                <input type="checkbox" class="filled-in" {% if locked %}checked="checked" {% endif %} />
+                                <input id="lock" type="checkbox" class="filled-in" {% if locked %}checked="checked"
+                                    {% endif %} onchange="javascript:lockUnlock();" />
                                 <span>Locked</span>
                             </label>
                             <br />
                             <label>
-                                <input type="checkbox" class="filled-in" {% if muted %}checked="checked" {% endif %} />
+                                <input id="mute" type="checkbox" class="filled-in" {% if muted %}checked="checked"
+                                    {% endif %} onchange="javascript:muteUnmute();" />
                                 <span>Muted</span>
                             </label>
                             <br><br><input type="submit" value="refresh" />
@@ -72,20 +78,20 @@
                         <form action="#">
 
                             <div class="input-field col s10 offset-s1">
-                                <select class="icons">
+                                <select class="icons" id="listPlaylist" onchange="javascript:requestPlaylist();">
                                     {% for playlist in playlists %}
-                                    <option value="{{loop.index0}}" data-icon="img/list.png" {% if loop.index0 == pid %}
-                                        disabled selected {% endif %}>{{playlist}}</option>
+                                    <option value="{{playlist[0]}}" data-icon="img/list.png" {% if playlist[0] == pid %}
+                                        disabled selected {% endif %}>{{playlist[1]}}</option>
                                     {% endfor %}
                                 </select>
                                 <label>Select playlist</label>
                             </div>
 
                             <div class="input-field col s10 offset-s1">
-                                <select class="icons">
+                                <select class="icons" id="listTrack" onchange="javascript:requestTrack();">
                                     {% for track in tracks %}
-                                    <option value="{{loop.index0}}" data-icon="img/track.png"
-                                        {% if loop.index0 == tid %} disabled selected {% endif %}>{{track}}</option>
+                                    <option value="{{track[0]}}" data-icon="img/track.png" {% if track[0] == tid %}
+                                        disabled selected {% endif %}>{{track[1]}}</option>
                                     {% endfor %}
                                 </select>
                                 <label>Select track</label>
@@ -99,7 +105,8 @@
 
             <!--JavaScript at end of body for optimized loading-->
             <script type="text/javascript" src="js/materialize.min.js"></script>
-
+            <script type="text/javascript" src="js/jquery.min.js"></script>
+            <script type="text/javascript" src="js/bbox.js"></script>
             <script>
                 //var slider = document.getElementById("volume");
                 //slider.onmouseup = function () {
