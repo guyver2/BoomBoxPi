@@ -26,9 +26,10 @@ def get_uuid():
 
 
 class Track:
-    def __init__(self, uid, title, artist, hidden, nb_plays):
+    def __init__(self, uid, title, artist, album, hidden, nb_plays):
         self.title = title
         self.artist = artist
+        self.album = album
         self.hidden = hidden
         self.nb_plays = nb_plays
         self.hash = uid

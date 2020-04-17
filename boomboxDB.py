@@ -35,7 +35,13 @@ def extract_tags(filename):
             artist = artist.decode("ASCII")
     except:
         artist = "Unknown"
-    return (title, artist)
+    try:
+        album = tag["album"][0]
+        if isinstance(album, bytes):
+            album = album.decode("ASCII")
+    except:
+        album = "Unknown"
+    return (title, artist, album)
 
 
 class BoomboxDB:
@@ -99,7 +105,8 @@ class BoomboxDB:
         self.create_table(sql_create_playlists_songs_table)
 
     def get_tracks_from_playlist(self, playlist_id):
-        sql_search_tracks = """SELECT * from tracks WHERE id IN 
+        sql_search_tracks = """SELECT id, title, artist, album, hidden, nb_plays
+                               FROM tracks WHERE id IN 
                                (SELECT track_id from playlists_tracks 
                                 WHERE playlist_id IS ?);"""
         cur = self.connection.cursor()
@@ -107,7 +114,7 @@ class BoomboxDB:
         rows = cur.fetchall()
         result = []
         for row in rows:
-            result.append(Track(row[0], row[1], row[2], row[3], row[4]))
+            result.append(Track(row[0], row[1], row[2], row[3], row[4], row[5]))
         return result
 
     def get_playlists(self):
@@ -155,16 +162,16 @@ class BoomboxDB:
         else:
             return rows[0][0]
 
-    def add_track(self, title, artist, sha1):
+    def add_track(self, title, artist, album, sha1):
         """
         Create a new track
         :return: (is it a new track), track uid
         """
         try:
-            sql = """ INSERT INTO tracks(title, artist, sha1)
-                    VALUES(?,?,?)"""
+            sql = """ INSERT INTO tracks(title, artist, album, sha1)
+                    VALUES(?,?,?,?)"""
             cur = self.connection.cursor()
-            cur.execute(sql, (title, artist, sha1))
+            cur.execute(sql, (title, artist, album, sha1))
             print("new track " + title)
             return True, cur.lastrowid
         except Exception as e:
@@ -212,9 +219,9 @@ class BoomboxDB:
                 local_filename = track_file[len(Config.DUMP_FOLDER) :]
                 local_filename = local_filename.replace("\\", "/")
                 # add track
-                title, artist = extract_tags(track_file)
+                title, artist, album = extract_tags(track_file)
                 sha1 = get_hash(track_file)
-                new_track, track_id = self.add_track(title, artist, sha1)
+                new_track, track_id = self.add_track(title, artist, album, sha1)
                 # check if the track belongs to a playlist
                 parts = local_filename.split("/")
                 if len(parts) > 1:
