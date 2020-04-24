@@ -8,6 +8,7 @@ import shutil
 from pathlib import Path
 from mutagen.easyid3 import EasyID3
 import hashlib
+import json
 
 
 def get_hash(filename):
@@ -80,6 +81,8 @@ class BoomboxDB:
                                             id integer PRIMARY KEY,
                                             title text NOT NULL,
                                             artist text NOT NULL,
+                                            album text NOT NULL,
+                                            cover text,
                                             hidden integer DEFAULT 0,
                                             nb_plays integer DEFAULT 0,
                                             sha1 text NOT NULL UNIQUE
@@ -105,7 +108,7 @@ class BoomboxDB:
         self.create_table(sql_create_playlists_songs_table)
 
     def get_tracks_from_playlist(self, playlist_id):
-        sql_search_tracks = """SELECT id, title, artist, album, hidden, nb_plays
+        sql_search_tracks = """SELECT id, title, artist, album, hidden, nb_plays, cover
                                FROM tracks WHERE id IN 
                                (SELECT track_id from playlists_tracks 
                                 WHERE playlist_id IS ?);"""
@@ -114,19 +117,128 @@ class BoomboxDB:
         rows = cur.fetchall()
         result = []
         for row in rows:
-            result.append(Track(row[0], row[1], row[2], row[3], row[4], row[5]))
+            result.append(Track(row[0], row[1], row[2], row[3], row[4], row[5], row[6]))
         return result
 
-    def get_playlists(self):
-        sql_search_tracks = """SELECT * from playlists;"""
+    def get_track(self, track_id):
+        sql_search_tracks = """SELECT id, title, artist, album, hidden, nb_plays, cover
+                               FROM tracks WHERE id=?;"""
+        cur = self.connection.cursor()
+        cur.execute(sql_search_tracks, (track_id,))
+        rows = cur.fetchall()
+        result = None
+        for row in rows:
+            result = Track(row[0], row[1], row[2], row[3], row[4], row[5], row[6])
+        return result
+
+    def update_covers(self):
+        from cover_manager import CoverManager
+
+        sql_search_tracks = """SELECT id, title, artist, album, hidden, nb_plays, cover
+                               FROM tracks;"""
         cur = self.connection.cursor()
         cur.execute(sql_search_tracks)
+        rows = cur.fetchall()
+        result = None
+        for row in rows:
+            if row[6] is None:
+                print("updating cover for ", row[1], row[3])
+                track = Track(row[0], row[1], row[2], row[3], row[4], row[5], row[6])
+                track.cover = CoverManager.get_cover(track)
+                self.connection.execute(
+                    "UPDATE tracks SET cover=? WHERE id=?", (track.cover, track.hash)
+                )
+        self.connection.commit()
+        return result
+
+    def get_tracks_from_playlist_json(self, playlist_id):
+        sql_search_tracks = """SELECT id, title, artist, album, hidden, nb_plays, cover
+                               FROM tracks WHERE id IN 
+                               (SELECT track_id from playlists_tracks 
+                                WHERE playlist_id IS ?);"""
+        cur = self.connection.cursor()
+        cur.execute(sql_search_tracks, (playlist_id,))
+        rows = cur.fetchall()
+        result = []
+        for row in rows:
+            track = Track(row[0], row[1], row[2], row[3], row[4], row[5], row[6])
+            result.append(track.toDict())
+        return result
+
+    def get_tracks_id_from_playlist_json(self, playlist_id):
+        sql_search_tracks = """SELECT track_id from playlists_tracks 
+                                WHERE playlist_id IS ?;"""
+        cur = self.connection.cursor()
+        cur.execute(sql_search_tracks, (playlist_id,))
+        rows = cur.fetchall()
+        result = {"playlist_id": playlist_id}
+        tracks_id = []
+        for row in rows:
+            tracks_id.append(row[0])
+        result["tracks_id"] = tracks_id
+        return result
+
+    def get_tracks_json(self, track_id):
+        sql_search_tracks = """SELECT id, title, artist, album, hidden, nb_plays, cover
+                               FROM tracks WHERE id=?;"""
+        cur = self.connection.cursor()
+        cur.execute(sql_search_tracks, (track_id,))
+        rows = cur.fetchall()
+        for row in rows:
+            track = Track(row[0], row[1], row[2], row[3], row[4], row[5], row[6])
+            return track.toDict()
+        return {}
+
+    def get_playlists(self):
+        sql_search = """SELECT * from playlists;"""
+        cur = self.connection.cursor()
+        cur.execute(sql_search)
         rows = cur.fetchall()
         result = []
         for row in rows:
             tracks = self.get_tracks_from_playlist(row[0])
             result.append(Playlist(row[0], row[1], tracks, row[2]))
         return result
+
+    def get_playlists_json(self, playlist_id=None):
+        cur = self.connection.cursor()
+        if playlist_id is None:
+            sql_search = """SELECT id, name, hidden FROM playlists;"""
+            cur.execute(sql_search)
+            rows = cur.fetchall()
+            result = []
+            for row in rows:
+                result.append(
+                    {
+                        "id": row[0],
+                        "name": row[1],
+                        "hidden": row[2],
+                        "tracks": [
+                            "data/?q=track&tid=" + str(tid)
+                            for tid in self.get_tracks_id_from_playlist_json(row[0])[
+                                "tracks_id"
+                            ]
+                        ],
+                    }
+                )
+            return {"playlists": result}
+        else:
+            sql_search = """SELECT id, name, hidden FROM playlists WHERE id=?"""
+            cur.execute(sql_search, (playlist_id,))
+            rows = cur.fetchall()
+            result = {}
+            for row in rows:
+                result["id"] = row[0]
+                result["name"] = row[1]
+                result["hidden"] = row[2]
+                result["tracks"] = [
+                    "data/?q=track&tid=" + str(tid)
+                    for tid in self.get_tracks_id_from_playlist_json(row[0])[
+                        "tracks_id"
+                    ]
+                ]
+
+            return result
 
     def get_playlist_uid(self, name):
         cur = self.connection.cursor()

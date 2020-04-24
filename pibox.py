@@ -26,12 +26,13 @@ def get_uuid():
 
 
 class Track:
-    def __init__(self, uid, title, artist, album, hidden, nb_plays):
+    def __init__(self, uid, title, artist, album, hidden, nb_plays, cover):
         self.title = title
         self.artist = artist
         self.album = album
         self.hidden = hidden
         self.nb_plays = nb_plays
+        self.cover = cover
         self.hash = uid
         self.path = Config.TRACKS_FOLDER + "%06d.mp3" % uid
 
@@ -39,9 +40,12 @@ class Track:
         return {
             "title": self.title,
             "artist": self.artist,
+            "album": self.album,
             "nb_plays": self.nb_plays,
             "hidden": self.hidden,
+            "cover": self.get_cover_url(),
             "uuid": self.hash,
+            "url": "data/?q=track&tid=" + str(self.hash),
         }
 
     def __repr__(self):
@@ -49,6 +53,9 @@ class Track:
             return self.title + " by " + self.artist
         else:
             return self.title
+
+    def get_cover_url(self):
+        return "covers/track/" + os.path.basename(self.cover)
 
 
 class Playlist:
@@ -60,7 +67,16 @@ class Playlist:
         self.hidden = hidden
 
     def toDict(self):
-        return {"name": self.name, "hidden": self.hidden, "uuid": self.hash}
+        return {
+            "name": self.name,
+            "hidden": self.hidden,
+            "uuid": self.hash,
+            "cover": self.get_cover_url(),
+            "url": "data/?q=playlist&pid=" + str(self.hash),
+        }
+
+    def get_cover_url(self):
+        return "covers/playlist/default.jpg"
 
     def current(self):
         return self.tracks[self.trackID]
