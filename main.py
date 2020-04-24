@@ -13,6 +13,8 @@ import os
 import time
 from boomboxDB import BoomboxDB
 from pibox import Player, Playlist
+from cover_manager import CoverManager
+from config import Config
 
 if RPI_MODE:
     from button import Button
@@ -29,8 +31,9 @@ pot = None
 nfc = None
 
 
-def getStatus():
+def getStatus(base_url):
     return {
+        "base_url": base_url,
         "playlist": player.currentPlaylist.toDict(),
         "track": player.currentTrack.toDict(),
         "isPlaying": player.playing,
@@ -57,6 +60,16 @@ def send_img(path):
     return send_from_directory("img", path)
 
 
+@app.route("/covers/track/<path:path>")
+def send_track_cover(path):
+    return send_from_directory(Config.TRACKS_IMG_FOLDER, path)
+
+
+@app.route("/covers/playlist/<path:path>")
+def send_playlist_cover(path):
+    return send_from_directory(Config.PLAYLIST_IMG_FOLDER, path)
+
+
 @app.route("/api/", methods=["GET"])
 def api_index():
     global player
@@ -66,7 +79,7 @@ def api_index():
     try:
         q = request.args.get("q")
         if q == "status":
-            return jsonify(getStatus())
+            return jsonify(getStatus(request.url_root))
         elif q == "volume":
             player.setVolume(int(float(request.args.get("value"))))
         elif q == "play":
@@ -109,7 +122,32 @@ def api_index():
             {"status": False, "error": "Could not understand request\n" + str(e)}
         )
 
-    return jsonify(getStatus())
+    return jsonify(getStatus(request.url_root))
+
+
+@app.route("/data/", methods=["GET"])
+def data():
+    boomboxDB = BoomboxDB()
+    try:
+        q = request.args.get("q")
+        if q == "playlist":
+            pid = request.args.get("pid")
+            result = boomboxDB.get_playlists_json(pid)
+            result["base_url"] = request.url_root
+            return jsonify(result)
+        if q == "track":
+            tid = request.args.get("tid")
+            if tid is None:
+                raise Exception("A track ID is needed")
+            result = boomboxDB.get_tracks_json(tid)
+            result["base_url"] = request.url_root
+            return jsonify(result)
+
+    except Exception as e:
+        return jsonify(
+            {"status": False, "error": "Could not understand request\n" + str(e)}
+        )
+    return jsonify({"status": False, "error": "no request"})
 
 
 @app.route("/", methods=["GET", "POST"])
@@ -149,9 +187,11 @@ def startSignal():
 
 
 if __name__ == "__main__":
-    bbdb = BoomboxDB()
-    bbdb.process_dump()
-    playlists = bbdb.get_playlists()
+    boomboxDB = BoomboxDB()
+    boomboxDB.process_dump()
+    boomboxDB.update_covers()
+    playlists = boomboxDB.get_playlists()
+    del boomboxDB
 
     player = Player(playlists)
 
