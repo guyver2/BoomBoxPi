@@ -52,3 +52,7 @@ function muteUnmute() {
         $.getJSON("api", { q: "unmute" }, function (data) { updateStatus(data); });
     }
 }
+
+function requestContent(type, value) {
+    $.getJSON("api", { q: "request", value: type + "  " + value }, function (data) { });
+}

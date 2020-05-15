@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Boom Box de Jeanne</title>
+    <link type="text/css" rel="stylesheet" href="css/materialize.min.css" media="screen,projection" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+</head>
+
+<body>
+    <div class="navbar-fixed">
+        <nav>
+            <div class="nav-wrapper">
+                <a href="#" data-target="mobile-demo" class="sidenav-trigger">Boom Box de Jeanne</a>
+                <ul id="nav-mobile" class="right hide-on-med-and-down">
+                    <li><a href="/">BBOX</a></li>
+                    <li><a href="/playlist">Playlists</a></li>
+                </ul>
+            </div>
+        </nav>
+    </div>
+    <ul class="sidenav" id="mobile-demo">
+        <li><a href="/">BBOX</a></li>
+        <li><a href="/playlist">Playlists</a></li>
+    </ul>
+
+    <div class="container">
+        <center>
+            <H3>{{title}}</H3>
+        </center>
+        <div class="row">
+            <div class="col s3">
+                <a class="waves-effect waves-light btn-large" href='javascript:requestContent("p", "{{pid}}");'>
+                    Play
+                </a>
+            </div>
+            <div class="col s3 offset-s1">
+                <a class="waves-effect waves-light btn-large">
+                    Hide
+                </a>
+            </div>
+            <div class="col s3 offset-s1">
+                <a class="waves-effect waves-light btn-large">
+                    Edit
+                </a>
+            </div>
+        </div>
+        <div class="col s12 m8 offset-m2 l6 offset-l3">
+            {% for track in tracks %}
+            <a href='javascript:requestContent("t", "{{track[0]}}");'>
+                <div class="card-panel grey lighten-4 z-depth-1">
+                    <div class="row valign-wrapper">
+                        <div class="col s4">
+                            <img src="{{track[2]}}" alt="" class="responsive-img">
+                        </div>
+                        <div class="col s8">
+                            <span class="black-text">
+                                <p class="flow-text">{{track[1]}}</p>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+    <script type="text/javascript" src="js/materialize.min.js"></script>
+    <script type="text/javascript" src="js/jquery.min.js"></script>
+    <script type="text/javascript" src="js/bbox.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            var elems = document.querySelectorAll('select');
+            var instances = M.FormSelect.init(elems);
+            var elems2 = document.querySelectorAll('.sidenav');
+            var instances = M.Sidenav.init(elems2);
+        });
+    </script>
+</body>
+
+</html>

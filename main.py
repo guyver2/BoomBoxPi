@@ -11,10 +11,12 @@ from flask import render_template, request, send_from_directory, jsonify
 import glob
 import os
 import time
+from pathlib import Path
 from boomboxDB import BoomboxDB
 from pibox import Player, Playlist
 from cover_manager import CoverManager
 from config import Config
+import requests
 
 if RPI_MODE:
     from button import Button
@@ -67,7 +69,7 @@ def send_track_cover(path):
 
 @app.route("/covers/playlist/<path:path>")
 def send_playlist_cover(path):
-    return send_from_directory(Config.PLAYLIST_IMG_FOLDER, path)
+    return send_from_directory(Config.PLAYLISTS_IMG_FOLDER, path)
 
 
 @app.route("/api/", methods=["GET"])
@@ -151,7 +153,7 @@ def data():
 
 
 @app.route("/", methods=["GET", "POST"])
-def newIndex():
+def index():
     global player
     np = player.nowPlaying().replace("_", " ")
     locked = pot.lock
@@ -164,7 +166,7 @@ def newIndex():
     pid = player.currentPlaylist.hash
     tid = player.currentTrack.hash
     return render_template(
-        "index_new.html",
+        "index.html",
         now_playing=np,
         volume=volume,
         locked=locked,
@@ -174,6 +176,30 @@ def newIndex():
         tracks=tracks,
         tid=tid,
     )
+
+
+@app.route("/playlist", methods=["GET", "POST"])
+def playlist_page():
+    try:
+        pid = request.args.get("pid")
+        if pid is None:
+            cover_url = request.url_root + "covers/playlist/"
+            boomboxDB = BoomboxDB()
+            playlists = boomboxDB.get_playlists_no_tracks()
+            return render_template("playlists_list.html", playlists=playlists, cover_base_url=cover_url, base_url=request.url_root)
+        else:    
+            pid = int(pid)
+            cover_url = request.url_root + "covers/track/"
+            boomboxDB = BoomboxDB()
+            pl = boomboxDB.get_playlists(int(pid))
+            tracks = [(t.hash, t.title, cover_url + Path(t.cover).name) for t in pl.tracks]
+            return render_template(
+                "playlist.html", pid=pid, title=pl.name, tracks=tracks, base_url=request.url_root
+            )
+    except Exception as e:
+        return jsonify(
+            {"status": False, "error": "Could not understand request\n" + str(e)}
+        )
 
 
 def startSignal():

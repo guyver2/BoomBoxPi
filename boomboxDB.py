@@ -189,15 +189,32 @@ class BoomboxDB:
             return track.toDict()
         return {}
 
-    def get_playlists(self):
-        sql_search = """SELECT * from playlists;"""
+    def get_playlists(self, pid=None):
+        sql_search = """SELECT id, name, hidden from playlists;"""
+        if pid is not None:
+            sql_search = """SELECT id, name, hidden from playlists WHERE id=%d;""" % pid
         cur = self.connection.cursor()
         cur.execute(sql_search)
         rows = cur.fetchall()
         result = []
         for row in rows:
             tracks = self.get_tracks_from_playlist(row[0])
-            result.append(Playlist(row[0], row[1], tracks, row[2]))
+            result.append(Playlist(row[0], row[1].replace("_", " "), tracks, row[2]))
+        if pid is None:
+            return result
+        elif len(result) > 0:
+            return result[0]
+        else:
+            return None
+
+    def get_playlists_no_tracks(self):
+        sql_search = """SELECT id, name, hidden from playlists;"""
+        cur = self.connection.cursor()
+        cur.execute(sql_search)
+        rows = cur.fetchall()
+        result = []
+        for row in rows:
+            result.append((row[0], row[1].replace("_", " "), row[2], "default.jpg"))
         return result
 
     def get_playlists_json(self, playlist_id=None):
@@ -214,7 +231,7 @@ class BoomboxDB:
                         "name": row[1],
                         "hidden": row[2],
                         "tracks": [
-                            "data/?q=track&tid=" + str(tid)
+                            {"id": tid, "url": "data/?q=track&tid=" + str(tid)}
                             for tid in self.get_tracks_id_from_playlist_json(row[0])[
                                 "tracks_id"
                             ]
