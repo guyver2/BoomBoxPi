@@ -2,6 +2,7 @@ import glob
 import os
 import json
 from config import Config
+from enum import Enum
 
 if True:  # fake screen for raspberry pi
     os.environ["SDL_VIDEODRIVER"] = "dummy"
@@ -92,8 +93,12 @@ class Playlist:
     def shuffle(self):
         random.shuffle(self.tracks)
 
+class PlayerMode(Enum):
+    MUSIC = 1
+    WEBRADIO = 2
 
 class Player:
+    
     def __init__(self, playlists):
         global SONG_END
         self.lock = threading.RLock()
@@ -107,6 +112,7 @@ class Player:
         self.currentPlaylist = None
         self.currentTrack = None
         self.shuffleMode = False
+        self.mode = PlayerMode.MUSIC # TODO REUSE THIS to switch between local music and webradios
         pygame.mixer.pre_init(44100, -16, 2, 2048)  # setup mixer to avoid sound lag
         pygame.init()
         pygame.mixer.init()

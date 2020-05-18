@@ -71,6 +71,10 @@ def send_track_cover(path):
 def send_playlist_cover(path):
     return send_from_directory(Config.PLAYLISTS_IMG_FOLDER, path)
 
+@app.route("/covers/webradio/<path:path>")
+def send_playlist_cover(path):
+    return send_from_directory(Config.WEBRADIOS_IMG_FOLDER, path)
+
 
 @app.route("/api/", methods=["GET"])
 def api_index():

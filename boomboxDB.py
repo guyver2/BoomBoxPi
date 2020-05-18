@@ -102,10 +102,18 @@ class BoomboxDB:
                                         UNIQUE(playlist_id, track_id)
                                     );"""
 
+        sql_create_web_radios_table = """CREATE TABLE IF NOT EXISTS webradios (
+                                        id INTEGER PRIMARY KEY,
+                                        name text NOT NULL UNIQUE,
+                                        url text NOT NULL UNIQUE,
+                                        cover text
+                                    );"""
+
         # create tables
         self.create_table(sql_create_tracks_table)
         self.create_table(sql_create_playlists_table)
         self.create_table(sql_create_playlists_songs_table)
+        self.create_table(sql_create_web_radios_table)
 
     def get_tracks_from_playlist(self, playlist_id):
         sql_search_tracks = """SELECT id, title, artist, album, hidden, nb_plays, cover
@@ -119,6 +127,33 @@ class BoomboxDB:
         for row in rows:
             result.append(Track(row[0], row[1], row[2], row[3], row[4], row[5], row[6]))
         return result
+
+    def add_web_radio(self, name, url, cover=None):
+        try:
+            if cover is None:
+                cover = Config.DEFAULT_WR_IMG
+            sql = """ INSERT INTO webradios(name, url, cover)
+                    VALUES(?,?,?)"""
+            cur = self.connection.cursor()
+            cur.execute(sql, (name,))
+            print("new web radio", name, url)
+            return True, cur.lastrowid
+        except Exception as e:
+            print("Error with web radio", name, e)
+            return False, None
+
+    def get_web_radios(self):
+        sql_search = """SELECT id, name, url, cover FROM webradios;"""
+        cur = self.connection.cursor()
+        cur.execute(sql_search_tracks, (track_id,))
+        rows = cur.fetchall()
+        result = []
+        for row in rows:
+            result.append([row[0], row[1], row[2], row[3]])
+        return result
+    
+    def get_web_radios_json(self):
+        return self.get_web_radios()
 
     def get_track(self, track_id):
         sql_search_tracks = """SELECT id, title, artist, album, hidden, nb_plays, cover
