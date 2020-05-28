@@ -3,45 +3,46 @@ import re
 import subprocess
 import alsaaudio
 
+
 class WebRadioPlayer(object):
+
     def __init__(self):
         self.stream_url = None
         self.mpg123_process = None
-        self.mixer = alsaaudio.Mixer('PCM')
+        self.mixer = alsaaudio.Mixer()
         self.volume = self.get_volume()
         self.muted = False
 
     def mute(self):
         self.muted = True
-        self.setVolume(self.volume)
+        self.set_volume(self.volume)
 
     def unmute(self):
         self.muted = False
-        self.setVolume(self.volume)
+        self.set_volume(self.volume)
 
     def get_volume(self):
         volume_left, volume_right = self.mixer.getvolume()
-        return (volume_left + volume_right)//2
-            
+        return (volume_left + volume_right) // 2
+
     def set_volume(self, volume):
         self.volume = volume
         volume = 0 if self.muted else self.volume
         self.mixer.setvolume(volume, 0)
         self.mixer.setvolume(volume, 1)
-    
+
     def play(self, stream_url):
         self.stream_url = stream_url
         cmd = ["mpg123", stream_url]
         self.mpg123_process = subprocess.Popen(cmd)
-    
+
     def stop(self):
         if self.mpg123_process:
             self.mpg123_process.kill()
             self.mpg123_process = None
-        
-    def hard_stop(self):
-        proc = subprocess.Popen(['killall', 'mpg123'])
 
+    def hard_stop(self):
+        subprocess.Popen(['killall', 'mpg123'])
 
 
 if __name__ == "__main__":

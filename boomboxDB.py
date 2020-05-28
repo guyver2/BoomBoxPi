@@ -1,7 +1,10 @@
 import sqlite3
 from sqlite3 import Error
 from pibox import Track, Playlist
-from config import Config
+try:
+    from localConfig import LocalConfig as Config
+except:
+    from config import Config
 import glob
 import os
 import shutil

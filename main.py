@@ -4,7 +4,10 @@ if os.name == "nt":
 else:
     RPI_MODE = True
 
-from config import Config
+try:
+    from localConfig import LocalConfig as Config
+except:
+    from config import Config
 if Config.FAKE:
     RPI_MODE = False
 
@@ -19,7 +22,6 @@ from pathlib import Path
 from boomboxDB import BoomboxDB
 from pibox import Player, Playlist
 from cover_manager import CoverManager
-from config import Config
 import requests
 
 if RPI_MODE:
