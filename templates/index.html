@@ -9,21 +9,7 @@
 </head>
 
 <body>
-    <div class="navbar-fixed">
-        <nav>
-            <div class="nav-wrapper">
-                <a href="#" data-target="mobile-demo" class="sidenav-trigger">Boom Box de Jeanne</a>
-                <ul id="nav-mobile" class="right hide-on-med-and-down">
-                    <li><a href="/">BBOX</a></li>
-                    <li><a href="/playlist">Playlists</a></li>
-                </ul>
-            </div>
-        </nav>
-    </div>
-    <ul class="sidenav" id="mobile-demo">
-        <li><a href="/">BBOX</a></li>
-        <li><a href="/playlist">Playlists</a></li>
-    </ul>
+    {% include 'navbar.html' %}
 
     <div class="container">
         <center>
@@ -76,44 +62,17 @@
                 <h4>Admin</h4>
                 <p>
                 <div class="row">
-                    <form id="adminform" method="post">
-                        <label>
-                            <input id="lock" type="checkbox" class="filled-in" {% if locked %}checked="checked"
-                                {% endif %} onchange="javascript:lockUnlock();" />
-                            <span>Locked</span>
-                        </label>
-                        <br />
-                        <label>
-                            <input id="mute" type="checkbox" class="filled-in" {% if muted %}checked="checked"
-                                {% endif %} onchange="javascript:muteUnmute();" />
-                            <span>Muted</span>
-                        </label>
-                        <br><br><input type="submit" value="refresh" />
-                    </form>
-
-                    <form action="#">
-
-                        <div class="input-field col s10 offset-s1">
-                            <select class="icons" id="listPlaylist" onchange="javascript:requestPlaylist();">
-                                {% for playlist in playlists %}
-                                <option value="{{playlist[0]}}" data-icon="img/list.png" {% if playlist[0] == pid %}
-                                    disabled selected {% endif %}>{{playlist[1]}}</option>
-                                {% endfor %}
-                            </select>
-                            <label>Select playlist</label>
-                        </div>
-
-                        <div class="input-field col s10 offset-s1">
-                            <select class="icons" id="listTrack" onchange="javascript:requestTrack();">
-                                {% for track in tracks %}
-                                <option value="{{track[0]}}" data-icon="img/track.png" {% if track[0] == tid %} disabled
-                                    selected {% endif %}>{{track[1]}}</option>
-                                {% endfor %}
-                            </select>
-                            <label>Select track</label>
-                        </div>
-
-                    </form>
+                    <label>
+                        <input id="lock" type="checkbox" class="filled-in" {% if locked %}checked="checked" {% endif %}
+                            onchange="javascript:lockUnlock();" />
+                        <span>Locked</span>
+                    </label>
+                    <br />
+                    <label>
+                        <input id="mute" type="checkbox" class="filled-in" {% if muted %}checked="checked" {% endif %}
+                            onchange="javascript:muteUnmute();" />
+                        <span>Muted</span>
+                    </label>
                 </div>
                 </p>
                 </section>

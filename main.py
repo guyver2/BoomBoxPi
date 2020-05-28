@@ -1,9 +1,13 @@
 import os
-
 if os.name == "nt":
     RPI_MODE = False
 else:
     RPI_MODE = True
+
+from config import Config
+if Config.FAKE:
+    RPI_MODE = False
+
 import threading
 
 from flask import Flask
@@ -71,7 +75,8 @@ def send_track_cover(path):
 def send_playlist_cover(path):
     return send_from_directory(Config.PLAYLISTS_IMG_FOLDER, path)
 
-@app.route("/covers/webradio/<path:path>")
+
+@app.route("/covers/radio/<path:path>")
 def send_webradio_cover(path):
     return send_from_directory(Config.WEBRADIOS_IMG_FOLDER, path)
 
@@ -124,9 +129,10 @@ def api_index():
             req = request.args.get("value")
             player.request(req)
     except Exception as e:
-        return jsonify(
-            {"status": False, "error": "Could not understand request\n" + str(e)}
-        )
+        return jsonify({
+            "status": False,
+            "error": "Could not understand request\n" + str(e)
+        })
 
     return jsonify(getStatus(request.url_root))
 
@@ -150,9 +156,10 @@ def data():
             return jsonify(result)
 
     except Exception as e:
-        return jsonify(
-            {"status": False, "error": "Could not understand request\n" + str(e)}
-        )
+        return jsonify({
+            "status": False,
+            "error": "Could not understand request\n" + str(e)
+        })
     return jsonify({"status": False, "error": "no request"})
 
 
@@ -163,23 +170,11 @@ def index():
     locked = pot.lock
     muted = player.muted
     volume = player.getVolume()
-    playlists = [(p.hash, p.name.replace("_", " ")) for p in player.playlists]
-    tracks = [
-        (t.hash, t.title.replace("_", " ")) for t in player.currentPlaylist.tracks
-    ]
-    pid = player.currentPlaylist.hash
-    tid = player.currentTrack.hash
-    return render_template(
-        "index.html",
-        now_playing=np,
-        volume=volume,
-        locked=locked,
-        muted=muted,
-        playlists=playlists,
-        pid=pid,
-        tracks=tracks,
-        tid=tid,
-    )
+    return render_template("index.html",
+                           now_playing=np,
+                           volume=volume,
+                           locked=locked,
+                           muted=muted)
 
 
 @app.route("/playlist", methods=["GET", "POST"])
@@ -190,20 +185,48 @@ def playlist_page():
             cover_url = request.url_root + "covers/playlist/"
             boomboxDB = BoomboxDB()
             playlists = boomboxDB.get_playlists_no_tracks()
-            return render_template("playlists_list.html", playlists=playlists, cover_base_url=cover_url, base_url=request.url_root)
-        else:    
+            return render_template("playlists_list.html",
+                                   playlists=playlists,
+                                   cover_base_url=cover_url,
+                                   base_url=request.url_root)
+        else:
             pid = int(pid)
             cover_url = request.url_root + "covers/track/"
             boomboxDB = BoomboxDB()
             pl = boomboxDB.get_playlists(int(pid))
-            tracks = [(t.hash, t.title, cover_url + Path(t.cover).name) for t in pl.tracks]
-            return render_template(
-                "playlist.html", pid=pid, title=pl.name, tracks=tracks, base_url=request.url_root
-            )
+            tracks = [(t.hash, t.title, cover_url + Path(t.cover).name)
+                      for t in pl.tracks]
+            return render_template("playlist.html",
+                                   pid=pid,
+                                   title=pl.name,
+                                   tracks=tracks,
+                                   base_url=request.url_root)
     except Exception as e:
-        return jsonify(
-            {"status": False, "error": "Could not understand request\n" + str(e)}
-        )
+        return jsonify({
+            "status": False,
+            "error": "Could not understand request\n" + str(e)
+        })
+
+
+@app.route("/radios", methods=["GET", "POST"])
+def radio_page():
+    print("showing webradios")
+    try:
+        cover_url = request.url_root + "covers/radio/"
+        boomboxDB = BoomboxDB()
+        radios = boomboxDB.get_web_radios()
+        for radio in radios:
+            radio[3] = Path(radio[3]).name
+        print(radios)
+        return render_template("radios_list.html",
+                               radios=radios,
+                               cover_base_url=cover_url,
+                               base_url=request.url_root)
+    except Exception as e:
+        return jsonify({
+            "status": False,
+            "error": "Could not understand request: " + str(e)
+        })
 
 
 def startSignal():
