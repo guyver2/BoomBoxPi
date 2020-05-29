@@ -14,24 +14,24 @@
     <div class="container">
 
         <center>
-            <H1>Playlists</H1>
+            <H1>Web Radios</H1>
         </center>
         <div class="col s12 m8 offset-m2 l6 offset-l3">
-            {% for pl in playlists %}
-            <div class="card-panel grey lighten-4 z-depth-1">
-                <a href="{{base_url}}playlist?pid={{pl[0]}}">
+            {% for radio in radios %}
+            <a href='javascript:requestContent("r", "{{radio[0]}}");'>
+                <div class="card-panel grey lighten-4 z-depth-1">
                     <div class="row valign-wrapper">
                         <div class="col s4">
-                            <img src="{{cover_base_url + pl[3]}}" alt="" class="responsive-img">
+                            <img src="{{cover_base_url + radio[3]}}" alt="" class="responsive-img">
                         </div>
                         <div class="col s8">
                             <span class="black-text">
-                                <p class="flow-text">{{pl[1]}}</p>
+                                <p class="flow-text">{{radio[1]}}</p>
                             </span>
                         </div>
                     </div>
-                </a>
-            </div>
+                </div>
+            </a>
             {% endfor %}
         </div>
     </div>

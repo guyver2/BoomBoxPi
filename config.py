@@ -1,4 +1,5 @@
 class Config:
+    FAKE = False
     DATA = "/home/pi/boomboxpi/data/playlists/"
     TRACKS_FOLDER = DATA + "tracks/"
     DUMP_FOLDER = DATA + "dump/"

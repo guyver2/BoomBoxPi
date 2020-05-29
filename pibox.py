@@ -1,11 +1,14 @@
 import glob
 import os
 import json
-from config import Config
+try:
+    from localConfig import LocalConfig as Config
+except:
+    from config import Config
 from enum import Enum
 
-if True:  # fake screen for raspberry pi
-    os.environ["SDL_VIDEODRIVER"] = "dummy"
+# fake screen for raspberry pi
+os.environ["SDL_VIDEODRIVER"] = "dummy"
 
 from mutagen.easyid3 import EasyID3
 from mutagen.mp3 import MP3
@@ -17,6 +20,7 @@ import threading
 import pickle
 import uuid
 from pathlib import Path
+from webRadioPlayer import WebRadioPlayer
 
 SONG_END = pygame.USEREVENT + 1
 
@@ -27,6 +31,7 @@ def get_uuid():
 
 
 class Track:
+
     def __init__(self, uid, title, artist, album, hidden, nb_plays, cover):
         self.title = title
         self.artist = artist
@@ -60,6 +65,7 @@ class Track:
 
 
 class Playlist:
+
     def __init__(self, uid, name, tracks, hidden):
         self.name = name
         self.hash = uid
@@ -93,12 +99,14 @@ class Playlist:
     def shuffle(self):
         random.shuffle(self.tracks)
 
+
 class PlayerMode(Enum):
     MUSIC = 1
     WEBRADIO = 2
 
+
 class Player:
-    
+
     def __init__(self, playlists):
         global SONG_END
         self.lock = threading.RLock()
@@ -112,8 +120,10 @@ class Player:
         self.currentPlaylist = None
         self.currentTrack = None
         self.shuffleMode = False
-        self.mode = PlayerMode.MUSIC # TODO REUSE THIS to switch between local music and webradios
-        pygame.mixer.pre_init(44100, -16, 2, 2048)  # setup mixer to avoid sound lag
+        self.mode = PlayerMode.MUSIC
+        self.webRadioPlayer = WebRadioPlayer()
+        self.currentWebRadio = None
+        pygame.mixer.pre_init(44100, -16, 2, 2048)
         pygame.init()
         pygame.mixer.init()
         pygame.mixer.music.set_volume(0 if self.muted else self.volume)
@@ -135,7 +145,10 @@ class Player:
         self.alive = False
 
     def nowPlaying(self):
-        return self.currentPlaylist.name + " - " + str(self.currentTrack)
+        if self.mode == PlayerMode.WEBRADIO:
+            return "Radio: " + self.currentWebRadio
+        else:
+            return self.currentPlaylist.name + " - " + str(self.currentTrack)
 
     def setPlaylists(self, playlists):
         with self.lock:
@@ -147,6 +160,8 @@ class Player:
     def setPlaylist(self, playlist):
         with self.lock:
             self.stop()
+            if self.mode == PlayerMode.WEBRADIO:
+                self.mode = PlayerMode.MUSIC
             self.currentPlaylist = playlist
             if self.shuffleMode:
                 self.shuffle()
@@ -154,6 +169,9 @@ class Player:
 
     def play(self):
         with self.lock:
+            if self.mode == PlayerMode.WEBRADIO:
+                self.webRadioPlayer.stop()
+                self.mode = PlayerMode.MUSIC
             if self.playing and self.paused:
                 pygame.mixer.music.unpause()
                 pygame.mixer.music.set_volume(0 if self.muted else self.volume)
@@ -163,8 +181,7 @@ class Player:
                 self.currentTrack = self.currentPlaylist.current()
                 print("gonna play", self.currentTrack.path)
                 self.resetMixer(
-                    mutagen.mp3.MP3(self.currentTrack.path).info.sample_rate
-                )
+                    mutagen.mp3.MP3(self.currentTrack.path).info.sample_rate)
                 pygame.mixer.music.load(self.currentTrack.path)
                 pygame.mixer.music.play(0)
                 print("now playing", self.currentTrack)
@@ -173,16 +190,18 @@ class Player:
 
     def stop(self):
         with self.lock:
-            self.playing = False
-            self.paused = False
-            self.currentTrack = None
-            pygame.mixer.music.stop()
+            if self.mode == PlayerMode.WEBRADIO:
+                self.webRadioPlayer.stop()
+            else:
+                self.playing = False
+                self.paused = False
+                self.currentTrack = None
+                pygame.mixer.music.stop()
 
     def pause(self):
         with self.lock:
-            if not self.paused:
+            if not self.paused and self.mode == PlayerMode.MUSIC:
                 pygame.mixer.music.pause()
-                print("pause", self.currentTrack)
                 self.paused = True
 
     def playPause(self):
@@ -199,8 +218,12 @@ class Player:
 
     def next(self):
         with self.lock:
+            if self.mode == PlayerMode.WEBRADIO:
+                self.webRadioPlayer.stop()
+                self.mode = PlayerMode.MUSIC
             self.currentTrack = self.currentPlaylist.next()
-            self.resetMixer(mutagen.mp3.MP3(self.currentTrack.path).info.sample_rate)
+            self.resetMixer(
+                mutagen.mp3.MP3(self.currentTrack.path).info.sample_rate)
             pygame.mixer.music.load(self.currentTrack.path)
             pygame.mixer.music.set_volume(0 if self.muted else self.volume)
             pygame.mixer.music.play(0)
@@ -210,8 +233,12 @@ class Player:
 
     def prev(self):
         with self.lock:
+            if self.mode == PlayerMode.WEBRADIO:
+                self.webRadioPlayer.stop()
+                self.mode = PlayerMode.MUSIC
             self.currentTrack = self.currentPlaylist.prev()
-            self.resetMixer(mutagen.mp3.MP3(self.currentTrack.path).info.sample_rate)
+            self.resetMixer(
+                mutagen.mp3.MP3(self.currentTrack.path).info.sample_rate)
             pygame.mixer.music.load(self.currentTrack.path)
             pygame.mixer.music.set_volume(0 if self.muted else self.volume)
             pygame.mixer.music.play(0)
@@ -238,9 +265,15 @@ class Player:
 
     def setVolume(self, vol):
         with self.lock:
+            print("set volume", vol)
             self.volume = vol / 100.0
-            if self.playing and pygame.mixer.get_init() is not None:
-                pygame.mixer.music.set_volume(0 if self.muted else self.volume)
+            if self.mode == PlayerMode.WEBRADIO:
+                print("set volume webradio")
+                self.webRadioPlayer.set_volume(0 if self.muted else vol)
+            else:
+                if self.playing and pygame.mixer.get_init() is not None:
+                    pygame.mixer.music.set_volume(
+                        0 if self.muted else self.volume)
 
     def getVolume(self):
         return self.volume * 100
@@ -248,12 +281,19 @@ class Player:
     def mute(self):
         print("mute!")
         self.muted = True
-        self.setVolume(self.volume * 100)
+        self.setVolume(self.getVolume())
 
     def unmute(self):
         print("unmute!")
         self.muted = False
-        self.setVolume(self.volume * 100)
+        self.setVolume(self.getVolume())
+
+    def play_radio(self, name, url):
+        self.stop()
+        self.mode = PlayerMode.WEBRADIO
+        self.setVolume(self.getVolume())
+        self.webRadioPlayer.play(url)
+        self.currentWebRadio = name
 
     def request(self, path):
         with self.lock:
@@ -278,13 +318,19 @@ class Player:
                             self.setPlaylist(p)
                             self.play()
                             return
+            if flag == "r":
+                from boomboxDB import BoomboxDB
+                boomboxDB = BoomboxDB()
+                radio = boomboxDB.get_web_radio(uid)
+                self.play_radio(radio[1], radio[2])
+                return
             print("no match found, or invalid request")
 
     def watchdog(self):
         global SONG_END
         while self.alive:
             for event in pygame.event.get():
-                if event.type == SONG_END:
+                if event.type == SONG_END and self.mode == PlayerMode.MUSIC:
                     print("song ended, playing next one")
                     self.currentTrack.nb_plays += 1
                     self.next()

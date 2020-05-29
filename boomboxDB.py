@@ -1,7 +1,10 @@
 import sqlite3
 from sqlite3 import Error
 from pibox import Track, Playlist
-from config import Config
+try:
+    from localConfig import LocalConfig as Config
+except:
+    from config import Config
 import glob
 import os
 import shutil
@@ -46,6 +49,7 @@ def extract_tags(filename):
 
 
 class BoomboxDB:
+
     def __init__(self):
         self.db_file = Config.DATA + "boombox.db"
         self.connection = None
@@ -125,7 +129,8 @@ class BoomboxDB:
         rows = cur.fetchall()
         result = []
         for row in rows:
-            result.append(Track(row[0], row[1], row[2], row[3], row[4], row[5], row[6]))
+            result.append(
+                Track(row[0], row[1], row[2], row[3], row[4], row[5], row[6]))
         return result
 
     def add_web_radio(self, name, url, cover=None):
@@ -145,13 +150,28 @@ class BoomboxDB:
     def get_web_radios(self):
         sql_search = """SELECT id, name, url, cover FROM webradios;"""
         cur = self.connection.cursor()
-        cur.execute(sql_search_tracks, (track_id,))
+        cur.execute(sql_search)
         rows = cur.fetchall()
         result = []
         for row in rows:
-            result.append([row[0], row[1], row[2], row[3]])
+            result.append([
+                row[0], row[1], row[2],
+                Config.DEFAULT_WR_IMG if row[3] is None else row[3]
+            ])
         return result
-    
+
+    def get_web_radio(self, rid):
+        sql_search = """SELECT id, name, url, cover FROM webradios WHERE id=?;"""
+        cur = self.connection.cursor()
+        cur.execute(sql_search, (rid,))
+        rows = cur.fetchall()
+        for row in rows:
+            return [
+                row[0], row[1], row[2],
+                Config.DEFAULT_WR_IMG if row[3] is None else row[3]
+            ]
+        return None
+
     def get_web_radios_json(self):
         return self.get_web_radios()
 
@@ -163,7 +183,8 @@ class BoomboxDB:
         rows = cur.fetchall()
         result = None
         for row in rows:
-            result = Track(row[0], row[1], row[2], row[3], row[4], row[5], row[6])
+            result = Track(row[0], row[1], row[2], row[3], row[4], row[5],
+                           row[6])
         return result
 
     def update_covers(self):
@@ -178,11 +199,11 @@ class BoomboxDB:
         for row in rows:
             if row[6] is None:
                 print("updating cover for ", row[1], row[3])
-                track = Track(row[0], row[1], row[2], row[3], row[4], row[5], row[6])
+                track = Track(row[0], row[1], row[2], row[3], row[4], row[5],
+                              row[6])
                 track.cover = CoverManager.get_cover(track)
-                self.connection.execute(
-                    "UPDATE tracks SET cover=? WHERE id=?", (track.cover, track.hash)
-                )
+                self.connection.execute("UPDATE tracks SET cover=? WHERE id=?",
+                                        (track.cover, track.hash))
         self.connection.commit()
         return result
 
@@ -196,7 +217,8 @@ class BoomboxDB:
         rows = cur.fetchall()
         result = []
         for row in rows:
-            track = Track(row[0], row[1], row[2], row[3], row[4], row[5], row[6])
+            track = Track(row[0], row[1], row[2], row[3], row[4], row[5],
+                          row[6])
             result.append(track.toDict())
         return result
 
@@ -220,7 +242,8 @@ class BoomboxDB:
         cur.execute(sql_search_tracks, (track_id,))
         rows = cur.fetchall()
         for row in rows:
-            track = Track(row[0], row[1], row[2], row[3], row[4], row[5], row[6])
+            track = Track(row[0], row[1], row[2], row[3], row[4], row[5],
+                          row[6])
             return track.toDict()
         return {}
 
@@ -234,7 +257,8 @@ class BoomboxDB:
         result = []
         for row in rows:
             tracks = self.get_tracks_from_playlist(row[0])
-            result.append(Playlist(row[0], row[1].replace("_", " "), tracks, row[2]))
+            result.append(
+                Playlist(row[0], row[1].replace("_", " "), tracks, row[2]))
         if pid is None:
             return result
         elif len(result) > 0:
@@ -249,7 +273,8 @@ class BoomboxDB:
         rows = cur.fetchall()
         result = []
         for row in rows:
-            result.append((row[0], row[1].replace("_", " "), row[2], "default.jpg"))
+            result.append((row[0], row[1].replace("_",
+                                                  " "), row[2], "default.jpg"))
         return result
 
     def get_playlists_json(self, playlist_id=None):
@@ -260,19 +285,19 @@ class BoomboxDB:
             rows = cur.fetchall()
             result = []
             for row in rows:
-                result.append(
-                    {
-                        "id": row[0],
-                        "name": row[1],
-                        "hidden": row[2],
-                        "tracks": [
-                            {"id": tid, "url": "data/?q=track&tid=" + str(tid)}
-                            for tid in self.get_tracks_id_from_playlist_json(row[0])[
-                                "tracks_id"
-                            ]
-                        ],
-                    }
-                )
+                result.append({
+                    "id":
+                        row[0],
+                    "name":
+                        row[1],
+                    "hidden":
+                        row[2],
+                    "tracks": [{
+                        "id": tid,
+                        "url": "data/?q=track&tid=" + str(tid)
+                    } for tid in self.get_tracks_id_from_playlist_json(row[0])
+                               ["tracks_id"]],
+                })
             return {"playlists": result}
         else:
             sql_search = """SELECT id, name, hidden FROM playlists WHERE id=?"""
@@ -284,10 +309,8 @@ class BoomboxDB:
                 result["name"] = row[1]
                 result["hidden"] = row[2]
                 result["tracks"] = [
-                    "data/?q=track&tid=" + str(tid)
-                    for tid in self.get_tracks_id_from_playlist_json(row[0])[
-                        "tracks_id"
-                    ]
+                    "data/?q=track&tid=" + str(tid) for tid in
+                    self.get_tracks_id_from_playlist_json(row[0])["tracks_id"]
                 ]
 
             return result
@@ -380,7 +403,7 @@ class BoomboxDB:
         for track_file in Path(Config.DUMP_FOLDER).rglob("*.mp3"):
             track_file = str(track_file)
             if os.path.isfile(track_file):
-                local_filename = track_file[len(Config.DUMP_FOLDER) :]
+                local_filename = track_file[len(Config.DUMP_FOLDER):]
                 local_filename = local_filename.replace("\\", "/")
                 # add track
                 title, artist, album = extract_tags(track_file)
@@ -396,9 +419,8 @@ class BoomboxDB:
                     print("song %s" % (title,))
             if track_id is not None and new_track:
                 try:
-                    shutil.move(
-                        track_file, Config.TRACKS_FOLDER + "%06d.mp3" % track_id
-                    )
+                    shutil.move(track_file,
+                                Config.TRACKS_FOLDER + "%06d.mp3" % track_id)
                 except Exception as _:
                     self.delete_track(track_id)
         self.connection.commit()
