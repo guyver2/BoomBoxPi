@@ -1,6 +1,6 @@
 class Config:
     FAKE = False
-    DATA = "/home/pi/boomboxpi/data/playlists/"
+    DATA = "/home/antoine/perso/boomboxpi/data/playlists/"
     TRACKS_FOLDER = DATA + "tracks/"
     DUMP_FOLDER = DATA + "dump/"
     TRACKS_IMG_FOLDER = DATA + "covers/tracks/"
@@ -11,3 +11,5 @@ class Config:
     DEFAULT_WR_IMG = WEBRADIOS_IMG_FOLDER + "default.png"
     SPOTIPY_CLIENT_ID = "XXXXXXXX"
     SPOTIPY_CLIENT_SECRET = "XXXXXXXX"
+    MPD_HOST = "localhost"
+    MPD_PORT = 6600
