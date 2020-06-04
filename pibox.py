@@ -18,6 +18,7 @@ import pickle
 import uuid
 from pathlib import Path
 import mpd
+import alsaaudio
 
 
 def get_uuid():
@@ -50,7 +51,7 @@ class Track:
         }
 
     def __repr__(self):
-        if self.artist is not None:
+        if self.artist is not None and self.artist != "Unknown":
             return self.title + " by " + self.artist
         else:
             return self.title
@@ -104,18 +105,18 @@ class Player:
 
     def __init__(self, playlists):
         self.lock = threading.RLock()
-        self.volume = 0.05
         self.muted = False
         self.volumeMax = 100
         self.playing = False
         self.paused = False
         self.playlists = playlists
-        self.playlistID = 0
         self.currentPlaylist = None
-        self.currentTrack = None    # TODO deprecate this
         self.mode = PlayerMode.MUSIC
         self.currentWebRadio = None
         self.mpd_client = mpd.MPDClient(use_unicode=True)
+        self.mixer = alsaaudio.Mixer()
+        self.volume = None
+        self.volume = self.getVolume()
         with self.connection():
             self.mpd_client.repeat(1)
             self.mpd_client.clear()
@@ -123,7 +124,19 @@ class Player:
         self.alive = True
         if self.playlists is not None and len(self.playlists) > 0:
             self.setPlaylist(self.playlists[0])
-            self.currentTrack = self.currentPlaylist.current()
+
+    @property
+    def currentTrack(self):
+        with self.connection():
+            try:
+                trackID = int(self.mpd_client.currentsong()["pos"])
+                return self.currentPlaylist.tracks[trackID]
+            except:
+                return None
+
+    @currentTrack.setter
+    def currentTrack(self, value):
+        raise ValueError("currentTrack is not supposed to be set")
 
     @contextmanager
     def connection(self):
@@ -164,7 +177,7 @@ class Player:
                     self.mpd_client.add(Path(track.path).name)
             print("using playlist", self.currentPlaylist.name)
 
-    def play(self):
+    def play(self, songpos=0):
         with self.lock:
             if self.mode == PlayerMode.WEBRADIO:
                 self.mode = PlayerMode.MUSIC
@@ -172,13 +185,11 @@ class Player:
             if self.playing and self.paused:
                 with self.connection():
                     self.mpd_client.pause(0)
-                self.setVolume(0 if self.muted else self.volume)
+                self.setVolume(self.volume)
                 self.paused = False
             elif not self.playing:
-                self.currentTrack = self.currentPlaylist.current()
-                print("gonna play", self.currentTrack.path)
                 with self.connection():
-                    self.mpd_client.play()
+                    self.mpd_client.play(songpos)
                 print("now playing", self.currentTrack)
                 self.playing = True
                 self.paused = False
@@ -191,7 +202,6 @@ class Player:
             else:
                 self.playing = False
                 self.paused = False
-                self.currentTrack = None
                 with self.connection():
                     self.mpd_client.stop()
 
@@ -211,36 +221,49 @@ class Player:
 
     def next(self):
         with self.lock:
+            self.currentPlaylist.next()
             if self.mode == PlayerMode.WEBRADIO:
                 self.mode = PlayerMode.MUSIC
-            self.currentTrack = self.currentPlaylist.next()
-            with self.connection():
-                self.mpd_client.next()
+                self.setPlaylist(self.currentPlaylist)
+                with self.connection():
+                    print("atempting to play: ", self.currentPlaylist.trackID)
+                    self.play(self.currentPlaylist.trackID)
+            else:
+                with self.connection():
+                    self.mpd_client.play()
+                    self.mpd_client.next()
             print("now playing", self.currentTrack)
             self.playing = True
             self.paused = False
 
     def prev(self):
         with self.lock:
+            self.currentPlaylist.prev()
             if self.mode == PlayerMode.WEBRADIO:
                 self.mode = PlayerMode.MUSIC
-            self.currentTrack = self.currentPlaylist.prev()
-            with self.connection():
-                self.mpd_client.previous()
+                self.setPlaylist(self.currentPlaylist)
+                with self.connection():
+                    self.play(self.currentPlaylist.trackID)
+            else:
+                with self.connection():
+                    self.mpd_client.play()
+                    self.mpd_client.previous()
             print("now playing", self.currentTrack)
             self.playing = True
             self.paused = False
 
     def nextPlaylist(self):
         with self.lock:
-            self.playlistID = (self.playlistID + 1) % len(self.playlists)
-            self.setPlaylist(self.playlists[self.playlistID])
+            playlistID = self.playlists.index(self.currentPlaylist)
+            playlistID = (playlistID + 1) % len(self.playlists)
+            self.setPlaylist(self.playlists[playlistID])
             self.play()
 
     def prevPlaylist(self):
         with self.lock:
-            self.playlistID = (self.playlistID - 1) % len(self.playlists)
-            self.setPlaylist(self.playlists[self.playlistID])
+            playlistID = self.playlists.index(self.currentPlaylist)
+            playlistID = (playlistID - 1) % len(self.playlists)
+            self.setPlaylist(self.playlists[playlistID])
             self.play()
 
     def getTrackPos(self):
@@ -250,13 +273,20 @@ class Player:
                     status = self.mpd_client.status()
                     return status["elapsed"], status["duration"]
 
-    def setVolume(self, vol):
+    def setVolume(self, volume):
         with self.lock:
-            self.volume = vol
-            print("TODO, set volume", vol)    # TODO
+            print("muted:", self.muted)
+            self.volume = volume
+            volume = 0 if self.muted else self.volume
+            self.mixer.setvolume(int(volume), 0)
+            self.mixer.setvolume(int(volume), 1)
 
     def getVolume(self):
-        return self.volume
+        if self.volume is None:
+            volume_left, volume_right = self.mixer.getvolume()
+            return (volume_left + volume_right) // 2
+        else:
+            return self.volume
 
     def mute(self):
         print("mute!")
@@ -298,7 +328,7 @@ class Player:
                         if uid == t.hash:
                             p.trackID = i
                             self.setPlaylist(p)
-                            self.play()
+                            self.play(i)
                             return
             if flag == "r":
                 from boomboxDB import BoomboxDB
