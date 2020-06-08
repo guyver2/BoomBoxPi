@@ -3,14 +3,16 @@ import fcntl
 import time
 import threading
 
-i2c_address = 0x4D  # got it from i2cdetect -y 1
+i2c_address = 0x4D    # got it from i2cdetect -y 1
 I2C_SLAVE_COMMAND = 0x0703
 # set device address
 FileHandle = io.open("/dev/i2c-1", "rb", buffering=0)
 fcntl.ioctl(FileHandle, I2C_SLAVE_COMMAND, i2c_address)
+SENSIBILITY = 8
 
 
 class Potentiometer:
+
     def __init__(self, player):
         self.lock = False
         self.player = player
@@ -28,7 +30,7 @@ class Potentiometer:
         while self.player.alive:
             values = list(FileHandle.read(2))
             data = (values[0] * 256 + values[1]) / 4
-            if self.value == None or abs(self.value - data) > 3:
+            if self.value == None or abs(self.value - data) > SENSIBILITY:
                 if not self.lock:
                     self.player.setVolume(data / 20)
                 self.value = data

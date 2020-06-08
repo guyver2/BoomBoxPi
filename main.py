@@ -41,15 +41,25 @@ nfc = None
 
 def getStatus(base_url):
     return {
-        "base_url": base_url,
-        "playlist": player.currentPlaylist.toDict(),
-        "track": player.currentTrack.toDict(),
-        "isPlaying": player.playing,
-        "isPaused": player.paused,
-        "lock": pot.lock,
-        "mute": player.muted == 0,
-        "volume": player.getVolume(),
-        "nfc": nfc.mode,
+        "base_url":
+            base_url,
+        "playlist":
+            player.currentPlaylist.toDict(),
+        "track":
+            None
+            if player.currentTrack is None else player.currentTrack.toDict(),
+        "isPlaying":
+            player.playing,
+        "isPaused":
+            player.paused,
+        "lock":
+            pot.lock,
+        "mute":
+            player.muted,
+        "volume":
+            player.getVolume(),
+        "nfc":
+            nfc.mode,
     }
 
 
@@ -97,6 +107,7 @@ def api_index():
             return jsonify(getStatus(request.url_root))
         elif q == "volume":
             player.setVolume(int(float(request.args.get("value"))))
+            return {}
         elif q == "play":
             player.play()
         elif q == "pause":

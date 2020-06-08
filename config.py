@@ -11,3 +11,5 @@ class Config:
     DEFAULT_WR_IMG = WEBRADIOS_IMG_FOLDER + "default.png"
     SPOTIPY_CLIENT_ID = "XXXXXXXX"
     SPOTIPY_CLIENT_SECRET = "XXXXXXXX"
+    MPD_HOST = "localhost"
+    MPD_PORT = 6600

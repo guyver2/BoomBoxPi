@@ -16,7 +16,7 @@
             <H3>La BoomBox de Jeanne</H3>
         </center>
         {% if now_playing %}
-        <h5 id="nowPlaying">Now Playing : {{ now_playing }}</h5>
+        <h5 id="nowPlaying">{{ now_playing }}</h5>
         {% endif %}
         <div class="divider"></div>
         <div class="section">
@@ -51,7 +51,7 @@
                     </div>
                     <div class="col s6">
                         <p class="range-field"><input type="range" id="volume" name="volume" min="0" max="50"
-                                value="{{ volume }}" /></p>
+                                value="{{ volume }}" oninput='javascript:setVolume(volume.value);' /></p>
                     </div>
                 </div>
             </form>
