@@ -13,7 +13,7 @@ if Config.FAKE:
 
 import threading
 
-from flask import Flask
+from flask import Flask, redirect
 from flask import render_template, request, send_from_directory, jsonify
 import glob
 import os
@@ -85,8 +85,6 @@ def send_track_cover(path):
 
 @app.route("/covers/playlist/<path:path>")
 def send_playlist_cover(path):
-    print(path)
-    print(Config.PLAYLISTS_IMG_FOLDER)
     return send_from_directory(Config.PLAYLISTS_IMG_FOLDER, path)
 
 
@@ -143,6 +141,9 @@ def api_index():
         elif q == "request":
             req = request.args.get("value")
             player.request(req)
+        elif q == "search":
+            req = request.args.get("value")
+            return jsonify(BoomboxDB().search(req))
     except Exception as e:
         return jsonify({
             "status": False,
@@ -244,6 +245,29 @@ def radio_page():
         })
 
 
+@app.route("/search", methods=["GET", "POST"])
+def search_page():
+    value = request.args.get("value")
+    if value is None:
+        return redirect("/")
+    try:
+        return BoomboxDB().search(value)
+    except:
+        redirect("/")
+
+    # try:
+    #     cover_url = request.url_root + "covers/radio/"
+    #     boomboxDB = BoomboxDB()
+    #     radios = boomboxDB.get_web_radios()
+    #     for radio in radios:
+    #         radio[3] = Path(radio[3]).name
+    #     print(radios)
+    #     return render_template("radios_list.html",
+    #                            radios=radios,
+    #                            cover_base_url=cover_url,
+    #                            base_url=request.url_root)
+
+
 def startSignal():
     global buttons
     for b in buttons:
@@ -272,4 +296,4 @@ if __name__ == "__main__":
     pot = Potentiometer(player)
     nfc = NFC(player)
 
-    app.run(host="0.0.0.0")
+    app.run(host="0.0.0.0", debug=True)

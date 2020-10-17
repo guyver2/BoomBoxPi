@@ -425,6 +425,39 @@ class BoomboxDB:
                     self.delete_track(track_id)
         self.connection.commit()
 
+    def search(self, value):
+        # track name
+        cur = self.connection.cursor()
+        sql_search = f"""SELECT id, title 
+                         FROM tracks 
+                         WHERE title 
+                         LIKE '%{value}%';"""
+        print(sql_search)
+        cur.execute(sql_search)
+        rows = cur.fetchall()
+        tracks = []
+        for row in rows:
+            tracks.append({
+                "id": row[0],
+                "title": row[1],
+            })
+        # playlist name
+        cur = self.connection.cursor()
+        sql_search = f"""SELECT id, name  
+                         FROM playlists
+                         WHERE name
+                         LIKE '%{value}%';"""
+        cur.execute(sql_search)
+        rows = cur.fetchall()
+        pls = []
+        for row in rows:
+            pls.append({
+                "id": row[0],
+                "name": row[1],
+            })
+
+        return {"tracks": tracks, "playlists": pls}
+
 
 if __name__ == "__main__":
     bbdb = BoomboxDB()

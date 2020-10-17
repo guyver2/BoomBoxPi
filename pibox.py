@@ -114,7 +114,7 @@ class Player:
         self.mode = PlayerMode.MUSIC
         self.currentWebRadio = None
         self.mpd_client = mpd.MPDClient(use_unicode=True)
-        self.mixer = alsaaudio.Mixer("PCM")
+        self.mixer = alsaaudio.Mixer()
         self.volume = None
         self.volume = self.getVolume()
         with self.connection():
