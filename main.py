@@ -13,7 +13,7 @@ if Config.FAKE:
 
 import threading
 
-from flask import Flask
+from flask import Flask, redirect
 from flask import render_template, request, send_from_directory, jsonify
 import glob
 import os
@@ -85,8 +85,6 @@ def send_track_cover(path):
 
 @app.route("/covers/playlist/<path:path>")
 def send_playlist_cover(path):
-    print(path)
-    print(Config.PLAYLISTS_IMG_FOLDER)
     return send_from_directory(Config.PLAYLISTS_IMG_FOLDER, path)
 
 
@@ -242,6 +240,33 @@ def radio_page():
             "status": False,
             "error": "Could not understand request: " + str(e)
         })
+
+
+@app.route("/search", methods=["GET", "POST"])
+def search_page():
+    value = request.args.get("value")
+    if value is None:
+        return redirect("/")
+    try:
+        search_result = BoomboxDB().search(value)
+        playlists = search_result["playlists"]
+        cover_pls_url = request.url_root + "covers/playlist/"
+        tracks = search_result["tracks"]
+        cover_track_url = request.url_root + "covers/track/"
+        tracks = [{
+            "id": t["id"],
+            "title": t["title"],
+            "cover": cover_track_url + Path(t["cover"]).name,
+        } for t in tracks]
+        return render_template("search_result.html",
+                               playlists=playlists,
+                               tracks=tracks,
+                               cover_pls_url=cover_pls_url,
+                               cover_track_url=cover_track_url,
+                               base_url=request.url_root)
+    except Exception as e:
+        print(e)
+        return redirect("/")
 
 
 def startSignal():

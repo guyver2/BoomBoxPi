@@ -79,3 +79,7 @@ function requestContent(type, value, message = "") {
         toast_this(message);
     }
 }
+
+function search(value) {
+    location.href = "search?value=" + value;
+}
