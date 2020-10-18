@@ -251,21 +251,25 @@ def search_page():
     if value is None:
         return redirect("/")
     try:
-        return BoomboxDB().search(value)
-    except:
-        redirect("/")
-
-    # try:
-    #     cover_url = request.url_root + "covers/radio/"
-    #     boomboxDB = BoomboxDB()
-    #     radios = boomboxDB.get_web_radios()
-    #     for radio in radios:
-    #         radio[3] = Path(radio[3]).name
-    #     print(radios)
-    #     return render_template("radios_list.html",
-    #                            radios=radios,
-    #                            cover_base_url=cover_url,
-    #                            base_url=request.url_root)
+        search_result = BoomboxDB().search(value)
+        playlists = search_result["playlists"]
+        cover_pls_url = request.url_root + "covers/playlist/"
+        tracks = search_result["tracks"]
+        cover_track_url = request.url_root + "covers/track/"
+        tracks = [{
+            "id": t["id"],
+            "title": t["title"],
+            "cover": cover_track_url + Path(t["cover"]).name,
+        } for t in tracks]
+        return render_template("search_result.html",
+                               playlists=playlists,
+                               tracks=tracks,
+                               cover_pls_url=cover_pls_url,
+                               cover_track_url=cover_track_url,
+                               base_url=request.url_root)
+    except Exception as e:
+        print(e)
+        return redirect("/")
 
 
 def startSignal():

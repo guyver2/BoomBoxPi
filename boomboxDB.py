@@ -428,7 +428,7 @@ class BoomboxDB:
     def search(self, value):
         # track name
         cur = self.connection.cursor()
-        sql_search = f"""SELECT id, title 
+        sql_search = f"""SELECT id, title, cover
                          FROM tracks 
                          WHERE title 
                          LIKE '%{value}%';"""
@@ -440,10 +440,11 @@ class BoomboxDB:
             tracks.append({
                 "id": row[0],
                 "title": row[1],
+                "cover": row[2],
             })
         # playlist name
         cur = self.connection.cursor()
-        sql_search = f"""SELECT id, name  
+        sql_search = f"""SELECT id, name
                          FROM playlists
                          WHERE name
                          LIKE '%{value}%';"""
