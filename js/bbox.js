@@ -12,21 +12,29 @@ function updateStatus(data) { // TODO use this instead of reloading
     $("#mute").prop("checked", data.mute);
 }
 
+function toast_this(content) {
+    M.Toast.dismissAll();
+    M.toast({ html: content, displayLength: 4000 });
+}
 
 function nextSong() {
     $.getJSON("api", { q: "nextSong" }, function (data) { updateStatus(data); });
+    toast_this("Next");
 }
 
 function prevSong() {
     $.getJSON("api", { q: "previousSong" }, function (data) { updateStatus(data); });
+    toast_this("Previous");
 }
 
 function playPause() {
     $.getJSON("api", { q: "playPause" }, function (data) { updateStatus(data); });
+    toast_this("Play / Pause");
 }
 
 function nextPlaylist() {
     $.getJSON("api", { q: "nextPlayList" }, function (data) { updateStatus(data); });
+    toast_this("Next playlist");
 }
 
 function requestPlaylist() {
@@ -65,6 +73,9 @@ function setVolume(volume) {
     $.getJSON("api", { q: "volume", value: volume });
 }
 
-function requestContent(type, value) {
-    $.getJSON("api", { q: "request", value: type + "  " + value }, function (data) { updateStatus(data); });
+function requestContent(type, value, message = "") {
+    $.getJSON("api", { q: "request", value: type + "  " + value })
+    if (message) {
+        toast_this(message);
+    }
 }

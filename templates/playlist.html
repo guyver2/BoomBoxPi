@@ -17,7 +17,8 @@
         </center>
         <div class="row">
             <div class="col s3">
-                <a class="waves-effect waves-light btn-large" href='javascript:requestContent("p", "{{pid}}");'>
+                <a class="waves-effect waves-light btn-large"
+                    href='javascript:requestContent("p", "{{pid}}", "{{title}}");'>
                     Play
                 </a>
             </div>
@@ -34,7 +35,7 @@
         </div>
         <div class="col s12 m8 offset-m2 l6 offset-l3">
             {% for track in tracks %}
-            <a href='javascript:requestContent("t", "{{track[0]}}");'>
+            <a href='javascript:requestContent("t", "{{track[0]}}","{{track[1]}}");'>
                 <div class="card-panel grey lighten-4 z-depth-1">
                     <div class="row valign-wrapper">
                         <div class="col s4">
