@@ -74,7 +74,7 @@ function setVolume(volume) {
 }
 
 function requestContent(type, value, message = "") {
-    $.getJSON("api", { q: "request", value: type + "  " + value })
+    $.getJSON("api", { q: "request", value: type + "  " + value });
     if (message) {
         toast_this(message);
     }
@@ -82,4 +82,13 @@ function requestContent(type, value, message = "") {
 
 function search(value) {
     location.href = "search?value=" + value;
+}
+
+
+function writeTrackNFC(hash) {
+    $.getJSON("api", { q: "nfcTrack", hash: hash });
+}
+
+function writePlsNFC(hash) {
+    $.getJSON("api", { q: "nfcPlaylist", hash: hash });
 }

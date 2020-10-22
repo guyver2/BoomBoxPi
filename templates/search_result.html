@@ -16,7 +16,7 @@
         <center>
             <H1>Search results</H1>
         </center>
-	{% if playlists|length > 0 %}
+        {% if playlists|length > 0 %}
         <h2>Playlists</h2>
         <div class="col s12 m8 offset-m2 l6 offset-l3">
             {% for pl in playlists %}
@@ -25,6 +25,9 @@
                     <div class="row valign-wrapper">
                         <div class="col s4">
                             <img src="{{cover_pls_url}}default.jpg" alt="" class=" responsive-img">
+                            <a class="waves-effect waves-light btn-small" href='javascript:writePlsNFC({{pl['id']}});'>
+                                NFC
+                            </a>
                         </div>
                         <div class="col s8">
                             <span class="black-text">
@@ -36,9 +39,9 @@
             </div>
             {% endfor %}
         </div>
-	{% endif %}
+        {% endif %}
 
-	{% if tracks|length > 0 %}
+        {% if tracks|length > 0 %}
         <h2>Tracks</h2>
         <div class="col s12 m8 offset-m2 l6 offset-l3">
             {% for track in tracks %}
@@ -47,6 +50,10 @@
                     <div class="row valign-wrapper">
                         <div class="col s4">
                             <img src="{{track['cover']}}" alt="" class="responsive-img">
+                            <a class="waves-effect waves-light btn-small"
+                                href='javascript:writeTrackNFC({{track['id']}});'>
+                                NFC
+                            </a>
                         </div>
                         <div class="col s8">
                             <span class="black-text">
@@ -58,7 +65,7 @@
             </a>
             {% endfor %}
         </div>
-	{% endif %}
+        {% endif %}
     </div>
     <script type="text/javascript" src="js/materialize.min.js"></script>
     <script type="text/javascript" src="js/jquery.min.js"></script>

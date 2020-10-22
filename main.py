@@ -135,9 +135,13 @@ def api_index():
         elif q == "unmute":
             player.unmute()
         elif q == "nfcTrack":
-            nfc.switchMode(NFC.WRITE_TRACK)
+            track_hash = request.args.get("hash")
+            if track_hash is not None:
+                nfc.write("t " + track_hash)
         elif q == "nfcPlaylist":
-            nfc.switchMode(NFC.WRITE_PLAYLIST)
+            pls_hash = request.args.get("hash")
+            if pls_hash is not None:
+                nfc.write("p " + pls_hash)
         elif q == "request":
             req = request.args.get("value")
             player.request(req)
@@ -295,6 +299,6 @@ if __name__ == "__main__":
     buttons = [but0, but1, but3, but2]
     startSignal()
     pot = Potentiometer(player)
-    nfc = NFC(player)
+    nfc = NFC(player, buttons)
 
     app.run(host="0.0.0.0")
