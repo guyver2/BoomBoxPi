@@ -1,6 +1,4 @@
-import glob
 import os
-import json
 try:
     from localConfig import LocalConfig as Config
 except:
@@ -10,20 +8,20 @@ from enum import Enum
 from contextlib import contextmanager
 from mutagen.easyid3 import EasyID3
 from mutagen.mp3 import MP3
-import mutagen.mp3
 import random
-from time import sleep
 import threading
-import pickle
 import uuid
 from pathlib import Path
 import mpd
-import alsaaudio
 
 
 def get_uuid():
     full_uuid = uuid.uuid4()
     return full_uuid.hex[0:6]
+
+
+def clamp(n, smallest, largest):
+    return max(smallest, min(n, largest))
 
 
 class Track:
@@ -114,10 +112,8 @@ class Player:
         self.mode = PlayerMode.MUSIC
         self.currentWebRadio = None
         self.mpd_client = mpd.MPDClient(use_unicode=True)
-        self.mixer = alsaaudio.Mixer("PCM")
-        self.volume = None
-        self.volume = self.getVolume()
         with self.connection():
+            self.volume = int(self.mpd_client.status()["volume"])
             self.mpd_client.update()
             self.mpd_client.repeat(1)
             self.mpd_client.clear()
@@ -276,15 +272,16 @@ class Player:
 
     def setVolume(self, volume):
         with self.lock:
+            volume = clamp(volume, 0, 100)
             self.volume = volume
             volume = 0 if self.muted else self.volume
-            self.mixer.setvolume(int(volume), 0)
-            self.mixer.setvolume(int(volume), 1)
+            with self.connection():
+                self.mpd_client.setvol(self.volume)
 
     def getVolume(self):
         if self.volume is None:
-            volume_left, volume_right = self.mixer.getvolume()
-            return (volume_left + volume_right) // 2
+            with self.connection():
+                return int(self.mpd_client.status()["volume"])
         else:
             return self.volume
 

@@ -430,10 +430,10 @@ class BoomboxDB:
         cur = self.connection.cursor()
         sql_search = """SELECT id, title, cover
                          FROM tracks
-                         WHERE title
+                         WHERE title COLLATE NOCASE
                          LIKE ?;"""
         print(sql_search)
-        cur.execute(sql_search, ('%'+value+'%',))
+        cur.execute(sql_search, ('%' + value + '%',))
         rows = cur.fetchall()
         tracks = []
         for row in rows:
@@ -446,9 +446,9 @@ class BoomboxDB:
         cur = self.connection.cursor()
         sql_search = """SELECT id, name
                          FROM playlists
-                         WHERE name
+                         WHERE name COLLATE NOCASE
                          LIKE ?;"""
-        cur.execute(sql_search, ('%'+value+'%',))
+        cur.execute(sql_search, ('%' + value + '%',))
         rows = cur.fetchall()
         pls = []
         for row in rows:

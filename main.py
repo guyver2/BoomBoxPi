@@ -11,18 +11,17 @@ except:
 if Config.FAKE:
     RPI_MODE = False
 
-import threading
-
 from flask import Flask, redirect
 from flask import render_template, request, send_from_directory, jsonify
-import glob
 import os
 import time
 from pathlib import Path
+import alsaaudio
+import requests
+
 from boomboxDB import BoomboxDB
 from pibox import Player, Playlist
 from cover_manager import CoverManager
-import requests
 
 if RPI_MODE:
     from button import Button
@@ -30,6 +29,11 @@ if RPI_MODE:
     from nfc import NFC
 else:
     from fake import Button, Potentiometer, NFC
+
+#set volume to 100% using alsamixer
+mixer = alsaaudio.Mixer("PCM")
+mixer.setvolume(100, 0)
+mixer.setvolume(100, 1)
 
 app = Flask(__name__)
 
