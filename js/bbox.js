@@ -92,3 +92,31 @@ function writeTrackNFC(hash) {
 function writePlsNFC(hash) {
     $.getJSON("api", { q: "nfcPlaylist", hash: hash });
 }
+
+function hide(pl_id, buttonID) {
+    $.getJSON("api", { q: "hide", id: pl_id }, 
+    function (data) { 
+        if ("hidden" in data) {
+            if (data.hidden) {
+                document.getElementById(buttonID).innerHTML = "HIDDEN";
+            } else {
+                document.getElementById(buttonID).innerHTML = "VISIBLE";
+            }
+            
+        }
+    });
+}
+
+function favorite(track_id, iconID) {
+    $.getJSON("api", { q: "favorite", id: track_id }, 
+    function (data) { 
+        if ("favorite" in data) {
+            if (data.favorite) {
+                $("#"+iconID).attr("src", "img/favorite.png");
+            } else {
+                $("#"+iconID).attr("src", "img/favorite_outline.png");
+            }
+            
+        }
+    });
+}

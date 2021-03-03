@@ -149,6 +149,32 @@ def api_index():
         elif q == "request":
             req = request.args.get("value")
             player.request(req)
+        elif q == "hide":
+            boomboxDB = BoomboxDB()
+            pl_id = int(request.args.get("id"))
+            status = player.hide(pl_id)
+            if status != None:
+                boomboxDB = BoomboxDB()
+                boomboxDB.hide_playlist(pl_id, status)
+                return jsonify({"pl_id": pl_id, "hidden": status})
+            else:
+                return jsonify({"status": False, "error": "wrong playlist ID"})
+        elif q == "favorite":
+            boomboxDB = BoomboxDB()
+            track_id = int(request.args.get("id"))
+            favs = boomboxDB.get_favorites_id()
+            if track_id in favs:
+                boomboxDB.remove_favorite(track_id)
+                return jsonify({"track_id": track_id, "favorite": False})
+            else:
+                boomboxDB.add_favorite(track_id)
+                return jsonify({"track_id": track_id, "favorite": True})
+        else:
+            return jsonify({
+                "status": False,
+                "error": "Could not understand request: " + q
+            })
+
     except Exception as e:
         return jsonify({
             "status": False,
@@ -215,12 +241,14 @@ def playlist_page():
             cover_url = request.url_root + "covers/track/"
             boomboxDB = BoomboxDB()
             pl = boomboxDB.get_playlists(int(pid))
-            tracks = [(t.hash, t.title, cover_url + Path(t.cover).name)
-                      for t in pl.tracks]
+            fav_ids = boomboxDB.get_favorites_id()
+            tracks = [(t.hash, t.title, cover_url + Path(t.cover).name, t.hash
+                       in fav_ids) for t in pl.tracks]
             return render_template("playlist.html",
                                    pid=pid,
                                    title=pl.name,
                                    tracks=tracks,
+                                   hidden=pl.hidden,
                                    base_url=request.url_root)
     except Exception as e:
         return jsonify({
@@ -229,16 +257,28 @@ def playlist_page():
         })
 
 
+@app.route("/favorites", methods=["GET", "POST"])
+def favorites_page():
+    cover_url = request.url_root + "covers/track/"
+    boomboxDB = BoomboxDB()
+    tracks = boomboxDB.get_favorites()
+    tracks = [
+        (t.hash, t.title, cover_url + Path(t.cover).name, True) for t in tracks
+    ]
+    return render_template("favorites.html",
+                           title="Favorites",
+                           tracks=tracks,
+                           base_url=request.url_root)
+
+
 @app.route("/radios", methods=["GET", "POST"])
 def radio_page():
-    print("showing webradios")
     try:
         cover_url = request.url_root + "covers/radio/"
         boomboxDB = BoomboxDB()
         radios = boomboxDB.get_web_radios()
         for radio in radios:
             radio[3] = Path(radio[3]).name
-        print(radios)
         return render_template("radios_list.html",
                                radios=radios,
                                cover_base_url=cover_url,
@@ -256,20 +296,24 @@ def search_page():
     if value is None:
         return redirect("/")
     try:
-        search_result = BoomboxDB().search(value)
+        boomboxDB = BoomboxDB()
+        search_result = boomboxDB.search(value)
         playlists = search_result["playlists"]
-        cover_pls_url = request.url_root + "covers/playlist/"
+        playlists = [
+            [p['id'], p['name'], p['hidden'], "default.jpg"] for p in playlists
+        ]
+        cover_base_url = request.url_root + "covers/playlist/"
         tracks = search_result["tracks"]
         cover_track_url = request.url_root + "covers/track/"
-        tracks = [{
-            "id": t["id"],
-            "title": t["title"],
-            "cover": cover_track_url + Path(t["cover"]).name,
-        } for t in tracks]
+        fav_ids = boomboxDB.get_favorites_id()
+        tracks = [[
+            t['id'], t['title'], cover_track_url + Path(t["cover"]).name,
+            t["id"] in fav_ids
+        ] for t in tracks]
         return render_template("search_result.html",
                                playlists=playlists,
                                tracks=tracks,
-                               cover_pls_url=cover_pls_url,
+                               cover_base_url=cover_base_url,
                                cover_track_url=cover_track_url,
                                base_url=request.url_root)
     except Exception as e:

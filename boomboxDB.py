@@ -1,6 +1,7 @@
 import sqlite3
 from sqlite3 import Error
 from pibox import Track, Playlist
+
 try:
     from localConfig import LocalConfig as Config
 except:
@@ -113,11 +114,17 @@ class BoomboxDB:
                                         cover text
                                     );"""
 
+        sql_create_favorites_table = """CREATE TABLE IF NOT EXISTS favorites (
+                                        track_id INTEGER NOT NULL UNIQUE,
+                                        FOREIGN KEY (track_id) REFERENCES tracks (id)
+                                    );"""
+
         # create tables
         self.create_table(sql_create_tracks_table)
         self.create_table(sql_create_playlists_table)
         self.create_table(sql_create_playlists_songs_table)
         self.create_table(sql_create_web_radios_table)
+        self.create_table(sql_create_favorites_table)
 
     def get_tracks_from_playlist(self, playlist_id):
         sql_search_tracks = """SELECT id, title, artist, album, hidden, nb_plays, cover
@@ -141,7 +148,6 @@ class BoomboxDB:
                     VALUES(?,?,?)"""
             cur = self.connection.cursor()
             cur.execute(sql, (name,))
-            print("new web radio", name, url)
             return True, cur.lastrowid
         except Exception as e:
             print("Error with web radio", name, e)
@@ -155,8 +161,10 @@ class BoomboxDB:
         result = []
         for row in rows:
             result.append([
-                row[0], row[1], row[2],
-                Config.DEFAULT_WR_IMG if row[3] is None else row[3]
+                row[0],
+                row[1],
+                row[2],
+                Config.DEFAULT_WR_IMG if row[3] is None else row[3],
             ])
         return result
 
@@ -167,8 +175,10 @@ class BoomboxDB:
         rows = cur.fetchall()
         for row in rows:
             return [
-                row[0], row[1], row[2],
-                Config.DEFAULT_WR_IMG if row[3] is None else row[3]
+                row[0],
+                row[1],
+                row[2],
+                Config.DEFAULT_WR_IMG if row[3] is None else row[3],
             ]
         return None
 
@@ -191,7 +201,7 @@ class BoomboxDB:
         from cover_manager import CoverManager
 
         sql_search_tracks = """SELECT id, title, artist, album, hidden, nb_plays, cover
-                               FROM tracks;"""
+                               FROM tracks WHERE cover IS NULL;"""
         cur = self.connection.cursor()
         cur.execute(sql_search_tracks)
         rows = cur.fetchall()
@@ -334,7 +344,6 @@ class BoomboxDB:
                     VALUES(?)"""
             cur = self.connection.cursor()
             cur.execute(sql, (name,))
-            print("new playlist " + name)
             return True, cur.lastrowid
         except Exception as e:
             print("Error with playlist " + name + str(e))
@@ -359,7 +368,6 @@ class BoomboxDB:
                     VALUES(?,?,?,?)"""
             cur = self.connection.cursor()
             cur.execute(sql, (title, artist, album, sha1))
-            print("new track " + title)
             return True, cur.lastrowid
         except Exception as e:
             print("Error with track " + title + str(e))
@@ -432,7 +440,6 @@ class BoomboxDB:
                          FROM tracks
                          WHERE title COLLATE NOCASE
                          LIKE ?;"""
-        print(sql_search)
         cur.execute(sql_search, ('%' + value + '%',))
         rows = cur.fetchall()
         tracks = []
@@ -444,7 +451,7 @@ class BoomboxDB:
             })
         # playlist name
         cur = self.connection.cursor()
-        sql_search = """SELECT id, name
+        sql_search = """SELECT id, name, hidden
                          FROM playlists
                          WHERE name COLLATE NOCASE
                          LIKE ?;"""
@@ -454,13 +461,52 @@ class BoomboxDB:
         for row in rows:
             pls.append({
                 "id": row[0],
-                "name": row[1],
+                "name": row[1].replace("_", " "),
+                "hidden": row[2],
             })
 
         return {"tracks": tracks, "playlists": pls}
+
+    def hide_playlist(self, pl_id, status):
+        cur = self.connection.cursor()
+        cur.execute("UPDATE playlists SET hidden=? WHERE id=?", (status, pl_id))
+        self.connection.commit()
+
+    def get_favorites(self):
+        sql_search_tracks = """SELECT id, title, artist, album, hidden, nb_plays, cover
+                               FROM tracks WHERE id IN 
+                               (SELECT track_id from favorites);"""
+        cur = self.connection.cursor()
+        cur.execute(sql_search_tracks)
+        rows = cur.fetchall()
+        result = []
+        for row in rows:
+            result.append(
+                Track(row[0], row[1], row[2], row[3], row[4], row[5], row[6]))
+        return result
+
+    def get_favorites_id(self):
+        sql_search_tracks = """SELECT track_id FROM favorites;"""
+        cur = self.connection.cursor()
+        cur.execute(sql_search_tracks)
+        rows = cur.fetchall()
+        result = [row[0] for row in rows]
+        return result
+
+    def add_favorite(self, track_id):
+        cur = self.connection.cursor()
+        cur.execute("INSERT OR IGNORE INTO favorites(track_id) VALUES(?)",
+                    (track_id,))
+        self.connection.commit()
+
+    def remove_favorite(self, track_id):
+        cur = self.connection.cursor()
+        cur.execute("DELETE FROM favorites WHERE track_id=?", (track_id,))
+        self.connection.commit()
 
 
 if __name__ == "__main__":
     bbdb = BoomboxDB()
     bbdb.process_dump()
+    bbdb.update_covers()
     pl = bbdb.get_playlists()

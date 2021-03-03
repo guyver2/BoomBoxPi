@@ -223,7 +223,6 @@ class Player:
                 self.mode = PlayerMode.MUSIC
                 self.setPlaylist(self.currentPlaylist)
                 with self.connection():
-                    print("atempting to play: ", self.currentPlaylist.trackID)
                     self.play(self.currentPlaylist.trackID)
             else:
                 with self.connection():
@@ -252,14 +251,22 @@ class Player:
     def nextPlaylist(self):
         with self.lock:
             playlistID = self.playlists.index(self.currentPlaylist)
+            previous_playlistID = playlistID
             playlistID = (playlistID + 1) % len(self.playlists)
+            while self.playlists[
+                    playlistID].hidden and playlistID != previous_playlistID:
+                playlistID = (playlistID + 1) % len(self.playlists)
             self.setPlaylist(self.playlists[playlistID])
             self.play()
 
     def prevPlaylist(self):
         with self.lock:
             playlistID = self.playlists.index(self.currentPlaylist)
+            previous_playlistID = playlistID
             playlistID = (playlistID - 1) % len(self.playlists)
+            while self.playlists[
+                    playlistID].hidden and playlistID != previous_playlistID:
+                playlistID = (playlistID - 1) % len(self.playlists)
             self.setPlaylist(self.playlists[playlistID])
             self.play()
 
@@ -286,12 +293,10 @@ class Player:
             return self.volume
 
     def mute(self):
-        print("mute!")
         self.muted = True
         self.setVolume(self.getVolume())
 
     def unmute(self):
-        print("unmute!")
         self.muted = False
         self.setVolume(self.getVolume())
 
@@ -334,6 +339,14 @@ class Player:
                 self.play_radio(radio[1], radio[2])
                 return
             print("no match found, or invalid request")
+
+    def hide(self, pl_id):
+        with self.lock:
+            for p in self.playlists:
+                if pl_id == p.hash:
+                    p.hidden = not p.hidden
+                    return p.hidden
+        return None
 
 
 if __name__ == "__main__":

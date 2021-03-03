@@ -15,28 +15,6 @@
         <center>
             <H3>{{title}}</H3>
         </center>
-        <div class="row">
-            <div class="col s4">
-                <a class="waves-effect waves-light btn-large"
-                    href='javascript:requestContent("p", "{{pid}}", "{{title}}");'>
-                    Play
-                </a>
-            </div>
-            <div class="col s4">
-                <a class="waves-effect waves-light btn-large" href='javascript:writePlsNFC({{pid}});'>
-                    NFC
-                </a>
-            </div>
-            <div class="col s4">
-                <a class="waves-effect waves-light btn-large" id="show_hide" href='javascript:hide({{pid}}, "show_hide");'>
-                    {% if hidden %}
-                    HIDDEN
-                    {% else %}
-                    VISIBLE
-                    {% endif %}
-                </a>
-            </div>
-        </div>
         <div class="col s12 m8 offset-m2 l6 offset-l3">
             {% for track in tracks %}
             {% include 'track_div.html' %}

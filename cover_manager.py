@@ -23,17 +23,22 @@ def get_hash(data):
 
 
 class CoverManager:
-
     @staticmethod
     def get_cover(track):
+        print("get cover for %s - %s" % (str(track.hash), track.title))
         filename = CoverManager.get_existing(track)
+        print("1 %s" % filename)
         if filename is None:
             filename = CoverManager.get_from_id3_tags(track.hash)
+            print("2 %s" % filename)
         if filename is None and track.album != "Unknown":
             filename = CoverManager.search_from_album(track.album)
+            print("3 %s" % filename)
         if filename is None:
             filename = CoverManager.search_from_full_track(
-                "" if track.album == "Unknown" else track.album, track.title)
+                "" if track.album == "Unknown" else track.album, track.title
+            )
+            print("4 %s" % filename)
         if filename is None:
             filename = Config.DEFAULT_TRACK_IMG
         print("found:", filename)
@@ -41,13 +46,13 @@ class CoverManager:
 
     @staticmethod
     def get_existing(track):
-        filename_track_id = (Config.TRACKS_IMG_FOLDER +
-                             get_hash(str(track.hash)) + ".jpg")
-        filename_album = Config.TRACKS_IMG_FOLDER + get_hash(
-            track.album) + ".jpg"
-        filename_mixed = (Config.TRACKS_IMG_FOLDER +
-                          get_hash(track.album + track.title) + ".jpg")
-        for fname in [filename_track_id, filename_album, filename_mixed]:
+        candidates = [Config.TRACKS_IMG_FOLDER + get_hash(str(track.hash)) + ".jpg"]
+        if track.album != "Unknown":
+            candidates.append(Config.TRACKS_IMG_FOLDER + get_hash(track.album) + ".jpg")
+            candidates.append(
+                Config.TRACKS_IMG_FOLDER + get_hash(track.album + track.title) + ".jpg"
+            )
+        for fname in candidates:
             if os.path.exists(fname):
                 return fname
         return None
@@ -56,7 +61,7 @@ class CoverManager:
     def get_from_id3_tags(track_id):
         hash = get_hash(str(track_id))
         filename = Config.TRACKS_IMG_FOLDER + hash + ".jpg"
-        if os.path.exists(filename):    # if file alreadw exists we return it
+        if os.path.exists(filename):  # if file alreadw exists we return it
             return filename
 
         tags = ID3(Config.TRACKS_FOLDER + "%06d.mp3" % track_id)
@@ -73,17 +78,15 @@ class CoverManager:
     def search_from_album(album):
         hash = get_hash(album)
         filename = Config.TRACKS_IMG_FOLDER + hash + ".jpg"
-        if os.path.exists(filename):    # if file alreadw exists we return it
+        if os.path.exists(filename):  # if file alreadw exists we return it
             return filename
 
-        sp = spotipy.Spotify(
-            client_credentials_manager=SpotifyClientCredentials())
+        sp = spotipy.Spotify(client_credentials_manager=SpotifyClientCredentials())
         # first we search with album name + track title
         result = sp.search(q=album, type="album", limit=1)
         try:
             url = [
-                e for e in result["albums"]["items"][0]["images"]
-                if e["width"] == 300
+                e for e in result["albums"]["items"][0]["images"] if e["width"] == 300
             ][0]["url"]
             img_data = requests.get(url).content
             with open(filename, "wb") as fd:
@@ -97,16 +100,16 @@ class CoverManager:
     def search_from_full_track(album, title):
         hash = get_hash(album + title)
         filename = Config.TRACKS_IMG_FOLDER + hash + ".jpg"
-        if os.path.exists(filename):    # if file alreadw exists we return it
+        if os.path.exists(filename):  # if file alreadw exists we return it
             return filename
 
-        sp = spotipy.Spotify(
-            client_credentials_manager=SpotifyClientCredentials())
+        sp = spotipy.Spotify(client_credentials_manager=SpotifyClientCredentials())
         # first we search with album name + track title
         result = sp.search(q=album + " " + title, type="track", limit=1)
         try:
             url = [
-                e for e in result["tracks"]["items"][0]["album"]["images"]
+                e
+                for e in result["tracks"]["items"][0]["album"]["images"]
                 if e["width"] == 300
             ][0]["url"]
             img_data = requests.get(url).content
@@ -120,7 +123,8 @@ class CoverManager:
         result = sp.search(q=title, type="track", limit=1)
         try:
             url = [
-                e for e in result["tracks"]["items"][0]["album"]["images"]
+                e
+                for e in result["tracks"]["items"][0]["album"]["images"]
                 if e["width"] == 300
             ][0]["url"]
             img_data = requests.get(url).content

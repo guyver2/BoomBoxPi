@@ -1,0 +1,28 @@
+<div class="card-panel grey lighten-4 z-depth-1">
+    <div class="row valign-wrapper">
+        <div class="col s4">
+            <a href='javascript:requestContent("t", "{{track[0]}}","{{track[1]}}");'>
+                <img src="{{track[2]}}" alt="" class="responsive-img">
+            </a>
+        </div>
+        <div class="col s8">
+            <span class="black-text">
+                <p class="flow-text">{{track[1]}}</p>
+            </span>
+        </div>
+    </div>
+    <div class="row valign-wrapper">
+        <div class="col s12">
+            <a class="waves-effect waves-light btn-small" href='javascript:writeTrackNFC({{track[0]}});'>
+                NFC
+            </a>
+            <a class="waves-effect waves-light btn-small" href='javascript:favorite({{track[0]}}, "fav_{{track[0]}}");'>
+                {% if track[3] %}
+                <img id="fav_{{track[0]}}" src="img/favorite.png" alt="" height="32px">
+                {% else %}
+                <img id="fav_{{track[0]}}" src="img/favorite_outline.png" alt="" height=32px>
+                {% endif %}
+            </a>
+        </div>
+    </div>
+</div>

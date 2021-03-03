@@ -1,0 +1,31 @@
+<div class="card-panel grey lighten-4 z-depth-1">
+    <div class="row valign-wrapper">
+        <div class="col s4">
+            <a href="{{base_url}}playlist?pid={{pl[0]}}">
+                <img src="{{cover_base_url + pl[3]}}" alt="" class="responsive-img">
+            </a>
+        </div>
+        <div class="col s8">
+            <span class="black-text">
+                <p class="flow-text">{{pl[1]}}</p>
+            </span>
+        </div>
+    </div>
+    <div class="row valign-wrapper">
+        <div class="col s12">
+            <a class="waves-effect waves-light btn-small" href='javascript:requestContent("p", "{{pl[0]}}", "{{pl[1]}}");'>
+                PLAY
+            </a>
+            <a class="waves-effect waves-light btn-small" href='javascript:writePlsNFC({{pl[0]}});'>
+                NFC
+            </a>
+            <a class="waves-effect waves-light btn-small" id="hidden_pl_{{pl[0]}}" href='javascript:hide({{pl[0]}}, "hidden_pl_{{pl[0]}}");'>
+                {% if pl[2] %}
+                    HIDDEN
+                {% else %}
+                    VISIBLE
+                {% endif %}
+            </a>
+        </div>
+    </div>
+</div>
