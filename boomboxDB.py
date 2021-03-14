@@ -50,6 +50,8 @@ def extract_tags(filename):
         tracknumber = tag["tracknumber"][0]
         if isinstance(tracknumber, bytes):
             tracknumber = tracknumber.decode("ASCII")
+        if "/" in tracknumber:
+            tracknumber = tracknumber.split("/")[0]
         tracknumber = int(tracknumber)
     except:
         tracknumber = 1000
@@ -257,7 +259,7 @@ class BoomboxDB:
         result["tracks_id"] = tracks_id
         return result
 
-    def get_tracks_json(self, track_id):
+    def get_track_json(self, track_id):
         sql_search_tracks = """SELECT id, title, artist, album, hidden, nb_plays, cover, track_number
                                FROM tracks WHERE id=?;"""
         cur = self.connection.cursor()

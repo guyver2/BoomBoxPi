@@ -244,7 +244,6 @@ def playlist_page():
             fav_ids = boomboxDB.get_favorites_id()
             tracks = [(t.hash, t.title, cover_url + Path(t.cover).name, t.hash
                        in fav_ids, t.tracknumber) for t in pl.tracks]
-            print(tracks)
             tracks.sort(key=lambda t: t[4])
             return render_template("playlist.html",
                                    pid=pid,
