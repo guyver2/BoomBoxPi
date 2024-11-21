@@ -26,7 +26,7 @@ def get_hash(filename):
     return hash.hexdigest()[:8]
 
 
-def extract_tags(filename):
+def extract_tags(filename, track_number = 1000):
     tag = EasyID3(filename)
     try:
         title = tag["title"][0]
@@ -54,7 +54,8 @@ def extract_tags(filename):
             tracknumber = tracknumber.split("/")[0]
         tracknumber = int(tracknumber)
     except:
-        tracknumber = 1000
+        # defaults to track id given as paramerter
+        tracknumber = track_number
 
     return (title, artist, album, tracknumber)
 
