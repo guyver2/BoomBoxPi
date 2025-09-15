@@ -26,13 +26,15 @@ def clamp(n, smallest, largest):
 
 class Track:
 
-    def __init__(self, uid, title, artist, album, hidden, nb_plays, cover):
+    def __init__(self, uid, title, artist, album, hidden, nb_plays, cover,
+                 tracknumber):
         self.title = title
         self.artist = artist
         self.album = album
         self.hidden = hidden
         self.nb_plays = nb_plays
         self.cover = cover
+        self.tracknumber = tracknumber
         self.hash = uid
         self.path = Config.TRACKS_FOLDER + "%06d.mp3" % uid
 
@@ -45,6 +47,7 @@ class Track:
             "hidden": self.hidden,
             "cover": self.get_cover_url(),
             "uuid": self.hash,
+            "tracknumber": self.tracknumber,
             "url": "data/?q=track&tid=" + str(self.hash),
         }
 

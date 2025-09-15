@@ -7,7 +7,11 @@
         </div>
         <div class="col s8">
             <span class="black-text">
-                <p class="flow-text">{{track[1]}}</p>
+                {% if show_track_number %}
+                    <p class="flow-text">({{track[4]}}) - {{track[1]}}</p>
+                {% else %}
+                    <p class="flow-text">{{track[1]}}</p>
+                {% endif %}
             </span>
         </div>
     </div>

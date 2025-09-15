@@ -26,7 +26,7 @@ def get_hash(filename):
     return hash.hexdigest()[:8]
 
 
-def extract_tags(filename):
+def extract_tags(filename, track_number = 1000):
     tag = EasyID3(filename)
     try:
         title = tag["title"][0]
@@ -46,7 +46,18 @@ def extract_tags(filename):
             album = album.decode("ASCII")
     except:
         album = "Unknown"
-    return (title, artist, album)
+    try:
+        tracknumber = tag["tracknumber"][0]
+        if isinstance(tracknumber, bytes):
+            tracknumber = tracknumber.decode("ASCII")
+        if "/" in tracknumber:
+            tracknumber = tracknumber.split("/")[0]
+        tracknumber = int(tracknumber)
+    except:
+        # defaults to track id given as paramerter
+        tracknumber = track_number
+
+    return (title, artist, album, tracknumber)
 
 
 class BoomboxDB:
@@ -85,6 +96,7 @@ class BoomboxDB:
         sql_create_tracks_table = """ CREATE TABLE IF NOT EXISTS tracks (
                                             id integer PRIMARY KEY,
                                             title text NOT NULL,
+                                            track_number integer NOT NULL DEFAULT 1000,
                                             artist text NOT NULL,
                                             album text NOT NULL,
                                             cover text,
@@ -127,7 +139,7 @@ class BoomboxDB:
         self.create_table(sql_create_favorites_table)
 
     def get_tracks_from_playlist(self, playlist_id):
-        sql_search_tracks = """SELECT id, title, artist, album, hidden, nb_plays, cover
+        sql_search_tracks = """SELECT id, title, artist, album, hidden, nb_plays, cover, track_number
                                FROM tracks WHERE id IN 
                                (SELECT track_id from playlists_tracks 
                                 WHERE playlist_id IS ?);"""
@@ -137,7 +149,9 @@ class BoomboxDB:
         result = []
         for row in rows:
             result.append(
-                Track(row[0], row[1], row[2], row[3], row[4], row[5], row[6]))
+                Track(row[0], row[1], row[2], row[3], row[4], row[5], row[6],
+                      row[7]))
+        result.sort(key=lambda t: t.tracknumber)
         return result
 
     def add_web_radio(self, name, url, cover=None):
@@ -186,7 +200,7 @@ class BoomboxDB:
         return self.get_web_radios()
 
     def get_track(self, track_id):
-        sql_search_tracks = """SELECT id, title, artist, album, hidden, nb_plays, cover
+        sql_search_tracks = """SELECT id, title, artist, album, hidden, nb_plays, cover, track_number
                                FROM tracks WHERE id=?;"""
         cur = self.connection.cursor()
         cur.execute(sql_search_tracks, (track_id,))
@@ -194,13 +208,13 @@ class BoomboxDB:
         result = None
         for row in rows:
             result = Track(row[0], row[1], row[2], row[3], row[4], row[5],
-                           row[6])
+                           row[6], row[7])
         return result
 
     def update_covers(self):
         from cover_manager import CoverManager
 
-        sql_search_tracks = """SELECT id, title, artist, album, hidden, nb_plays, cover
+        sql_search_tracks = """SELECT id, title, artist, album, hidden, nb_plays, cover, track_number
                                FROM tracks WHERE cover IS NULL;"""
         cur = self.connection.cursor()
         cur.execute(sql_search_tracks)
@@ -210,7 +224,7 @@ class BoomboxDB:
             if row[6] is None:
                 print("updating cover for ", row[1], row[3])
                 track = Track(row[0], row[1], row[2], row[3], row[4], row[5],
-                              row[6])
+                              row[6], row[7])
                 track.cover = CoverManager.get_cover(track)
                 self.connection.execute("UPDATE tracks SET cover=? WHERE id=?",
                                         (track.cover, track.hash))
@@ -218,7 +232,7 @@ class BoomboxDB:
         return result
 
     def get_tracks_from_playlist_json(self, playlist_id):
-        sql_search_tracks = """SELECT id, title, artist, album, hidden, nb_plays, cover
+        sql_search_tracks = """SELECT id, title, artist, album, hidden, nb_plays, cover, track_number
                                FROM tracks WHERE id IN 
                                (SELECT track_id from playlists_tracks 
                                 WHERE playlist_id IS ?);"""
@@ -228,8 +242,9 @@ class BoomboxDB:
         result = []
         for row in rows:
             track = Track(row[0], row[1], row[2], row[3], row[4], row[5],
-                          row[6])
+                          row[6], row[7])
             result.append(track.toDict())
+        result.sort(key=lambda t: t.tracknumber)
         return result
 
     def get_tracks_id_from_playlist_json(self, playlist_id):
@@ -245,15 +260,15 @@ class BoomboxDB:
         result["tracks_id"] = tracks_id
         return result
 
-    def get_tracks_json(self, track_id):
-        sql_search_tracks = """SELECT id, title, artist, album, hidden, nb_plays, cover
+    def get_track_json(self, track_id):
+        sql_search_tracks = """SELECT id, title, artist, album, hidden, nb_plays, cover, track_number
                                FROM tracks WHERE id=?;"""
         cur = self.connection.cursor()
         cur.execute(sql_search_tracks, (track_id,))
         rows = cur.fetchall()
         for row in rows:
             track = Track(row[0], row[1], row[2], row[3], row[4], row[5],
-                          row[6])
+                          row[6], row[7])
             return track.toDict()
         return {}
 
@@ -358,16 +373,16 @@ class BoomboxDB:
         else:
             return rows[0][0]
 
-    def add_track(self, title, artist, album, sha1):
+    def add_track(self, title, artist, album, tracknumber, sha1):
         """
         Create a new track
         :return: (is it a new track), track uid
         """
         try:
-            sql = """ INSERT INTO tracks(title, artist, album, sha1)
-                    VALUES(?,?,?,?)"""
+            sql = """ INSERT INTO tracks(title, artist, album, track_number, sha1)
+                    VALUES(?,?,?,?,?)"""
             cur = self.connection.cursor()
-            cur.execute(sql, (title, artist, album, sha1))
+            cur.execute(sql, (title, artist, album, tracknumber, sha1))
             return True, cur.lastrowid
         except Exception as e:
             print("Error with track " + title + str(e))
@@ -414,9 +429,10 @@ class BoomboxDB:
                 local_filename = track_file[len(Config.DUMP_FOLDER):]
                 local_filename = local_filename.replace("\\", "/")
                 # add track
-                title, artist, album = extract_tags(track_file)
+                title, artist, album, tracknumber = extract_tags(track_file)
                 sha1 = get_hash(track_file)
-                new_track, track_id = self.add_track(title, artist, album, sha1)
+                new_track, track_id = self.add_track(title, artist, album,
+                                                     tracknumber, sha1)
                 # check if the track belongs to a playlist
                 parts = local_filename.split("/")
                 if len(parts) > 1:
@@ -436,7 +452,7 @@ class BoomboxDB:
     def search(self, value):
         # track name
         cur = self.connection.cursor()
-        sql_search = """SELECT id, title, cover
+        sql_search = """SELECT id, title, cover, track_number
                          FROM tracks
                          WHERE title COLLATE NOCASE
                          LIKE ?;"""
@@ -448,6 +464,7 @@ class BoomboxDB:
                 "id": row[0],
                 "title": row[1],
                 "cover": row[2],
+                "tracknumber": row[3]
             })
         # playlist name
         cur = self.connection.cursor()
@@ -473,7 +490,7 @@ class BoomboxDB:
         self.connection.commit()
 
     def get_favorites(self):
-        sql_search_tracks = """SELECT id, title, artist, album, hidden, nb_plays, cover
+        sql_search_tracks = """SELECT id, title, artist, album, hidden, nb_plays, cover, track_number
                                FROM tracks WHERE id IN 
                                (SELECT track_id from favorites);"""
         cur = self.connection.cursor()
@@ -482,7 +499,8 @@ class BoomboxDB:
         result = []
         for row in rows:
             result.append(
-                Track(row[0], row[1], row[2], row[3], row[4], row[5], row[6]))
+                Track(row[0], row[1], row[2], row[3], row[4], row[5], row[6],
+                      row[7]))
         return result
 
     def get_favorites_id(self):

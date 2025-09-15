@@ -198,7 +198,7 @@ def data():
             tid = request.args.get("tid")
             if tid is None:
                 raise Exception("A track ID is needed")
-            result = boomboxDB.get_tracks_json(tid)
+            result = boomboxDB.get_track_json(tid)
             result["base_url"] = request.url_root
             return jsonify(result)
 
@@ -243,7 +243,8 @@ def playlist_page():
             pl = boomboxDB.get_playlists(int(pid))
             fav_ids = boomboxDB.get_favorites_id()
             tracks = [(t.hash, t.title, cover_url + Path(t.cover).name, t.hash
-                       in fav_ids) for t in pl.tracks]
+                       in fav_ids, t.tracknumber) for t in pl.tracks]
+            tracks.sort(key=lambda t: t[4])
             return render_template("playlist.html",
                                    pid=pid,
                                    title=pl.name,
