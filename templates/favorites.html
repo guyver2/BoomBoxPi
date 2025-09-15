@@ -17,7 +17,9 @@
         </center>
         <div class="col s12 m8 offset-m2 l6 offset-l3">
             {% for track in tracks %}
-            {% include 'track_div.html' %}
+                {% with show_track_number=False %}
+                    {% include 'track_div.html' %}
+                {% endwith %}
             {% endfor %}
         </div>
     </div>
